@@ -2,9 +2,9 @@ import psycopg2
 
 TABLE_NAME = "top_posts"
 
-def is_table_exists(cursor, table_name):
-    cursor.execute("SELECT to_regclass('" + table_name + "');")
-    return cursor.fetchone()[0] == table_name
+def is_table_exists(cursor):
+    cursor.execute("SELECT to_regclass('" + TABLE_NAME + "');")
+    return cursor.fetchone()[0] == TABLE_NAME
 
 def create_table(cursor):
     cursor.execute( \
