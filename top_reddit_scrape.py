@@ -50,7 +50,7 @@ def main():
             link = entry.findAll("link")[0]['href']
             updated = entry.findAll("updated")[0].text
             title = entry.findAll("title")[0].text.replace("'", "''") # this is how you escape the single quote for psycopg2
-            content = entry.findAll("content")[0].text
+            content = entry.findAll("content")[0].text.replace("'", "''")
 
             # debug block
             #print("~~~Entry start~~~~~~~~~~~~~~~~~~~~~")

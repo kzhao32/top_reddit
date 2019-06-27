@@ -16,7 +16,7 @@ def create_table(cursor):
             "title text NOT NULL," \
             "link text NOT NULL," \
             "author_name text NOT NULL," \
-            "updated timestamptz NOT NULL" \
+            "updated timestamptz NOT NULL," \
             "content text NOT NULL" \
         ");" \
     )
