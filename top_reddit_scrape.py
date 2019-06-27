@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import bs4
 from bs4 import BeautifulSoup
 import datetime
