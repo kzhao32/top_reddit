@@ -17,6 +17,7 @@ def create_table(cursor):
             "link text NOT NULL," \
             "author_name text NOT NULL," \
             "updated timestamptz NOT NULL" \
+            "content text NOT NULL" \
         ");" \
     )
 
@@ -37,7 +38,7 @@ def get_results(cursor, threshold_rank):
     )
     return cursor.fetchall()
 
-def modify_record(cursor, post_id, rank, category, title, link, author_name, updated):
+def modify_record(cursor, post_id, rank, category, title, link, author_name, updated, content):
     # add record
     # commit
     # call get_record
@@ -55,8 +56,8 @@ def modify_record(cursor, post_id, rank, category, title, link, author_name, upd
         time_top_rank_achieved = str(cursor.fetchone()[0])
         cursor.execute( \
             "INSERT INTO " + TABLE_NAME + " " \
-            "(post_id, top_rank, time_top_rank_achieved, category, title, link, author_name, updated) " \
-            "VALUES ('" + post_id + "'," + str(rank) + ",'" + time_top_rank_achieved + "','" + category + "','" + title + "','" + link + "','" + author_name + "','" + updated + "');" \
+            "(post_id, top_rank, time_top_rank_achieved, category, title, link, author_name, updated, content) " \
+            "VALUES ('" + post_id + "'," + str(rank) + ",'" + time_top_rank_achieved + "','" + category + "','" + title + "','" + link + "','" + author_name + "','" + updated + "','" + content + "');" \
         )
     else:
         if lookup[1] > rank: # if existing_in_table < current_rank_to_maybe_put_in_table
@@ -68,9 +69,9 @@ def modify_record(cursor, post_id, rank, category, title, link, author_name, upd
 
 def test_case(cursor):
     print("setup 0")
-    modify_record(cursor, "tifu_qwe", 1, "tifu", "tifu somehow", "google.com", "me", '2019-06-14 19:10:25-07')
+    modify_record(cursor, "tifu_qwe", 1, "tifu", "tifu somehow", "google.com", "me", '2019-06-14 19:10:25-07', 'my content')
     print("setup 1")
-    modify_record(cursor, "jokes_abc", 5, "jokes", "6 afraid of 7", "youtube.com" "you", '2016-06-22 19:10:25-07')
+    modify_record(cursor, "jokes_abc", 5, "jokes", "6 afraid of 7", "youtube.com" "you", '2016-06-22 19:10:25-07', 'your content')
     print("test case 1")
     print(get_record(cursor, "tifu_qwe"))
     print("test case 2")
@@ -78,14 +79,14 @@ def test_case(cursor):
     print("test case 3")
     print(get_record(cursor, "should not exist"))
     print("setup 2")
-    modify_record(cursor, "tifu_qwe", 3, "tifu", "tifu somehow", "facebook.com", "me", '2019-06-14 19:10:25-07')
+    modify_record(cursor, "tifu_qwe", 3, "tifu", "tifu somehow", "facebook.com", "me", '2019-06-14 19:10:25-07', 'her content')
     record_to_check = get_record(cursor, "tifu_qwe")
     if record_to_check[1] == 1:
         print("test case 4 passed")
     else:
         print("test case 4 failed")
     print("setup 3")
-    modify_record(cursor, "jokes_abc", 3, "jokes", "6 afraid of 7", "amazon.com", "you", '2016-06-22 19:10:25-07')
+    modify_record(cursor, "jokes_abc", 3, "jokes", "6 afraid of 7", "amazon.com", "you", '2016-06-22 19:10:25-07', 'his content')
     record_to_check = get_record(cursor, "jokes_abc")
     if record_to_check[1] == 3:
         print("test case 5 passed")
