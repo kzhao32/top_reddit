@@ -1,10 +1,8 @@
 # top_reddit
 
 TODO:
-create vm small instance
+1. Figure out Let's Encrypt for HTTPS.
+2. Create HTML/CSS/JS for a single reddit post.
+3. Create a React component out of the HTML/CSS/JS for the single reddit post.
 
-install and launch apache web hosting server
-
-use duckDNS for domain
-
-write the front end with ReactJS (https://reactjs.org/)
+* Write the front end with ReactJS (https://reactjs.org/).
