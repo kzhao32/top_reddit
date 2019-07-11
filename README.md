@@ -1,8 +1,8 @@
 # top_reddit
 
 ## TODO:
-1. Create HTML/CSS/JS for a single reddit post.
-  a. Reference https://github.com/joshbuchea/HEAD for the HTML head tag.
+1. Create HTML/CSS/JS for a single reddit post.  
+  * Reference https://github.com/joshbuchea/HEAD for the HTML head tag.
 2. Create a React component out of the HTML/CSS/JS for the single reddit post.
 3. Set up cert bot automated renewal.
 
