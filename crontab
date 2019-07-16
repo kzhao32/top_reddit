@@ -22,4 +22,4 @@
 # For more information see the manual pages of crontab(5) and cron(8)
 # 
 # m h  dom mon dow   command
-* * * * * python3 /home/tzhao451/top_reddit/top_reddit_scrape.py >> /home/tzhao451/top_reddit_scrape.log
+*/3 * * * * python3 /home/allenyoface/top_reddit/top_reddit_scrape.py >> /home/allenyoface/top_reddit_scrape.log

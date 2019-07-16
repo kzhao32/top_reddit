@@ -1,31 +1,32 @@
-let linebreak = document.createElement("br");
-
-let node = document.createElement("li");
-let textnode = document.createTextNode("Water");
-node.appendChild(textnode);
-document.getElementById("list_of_top_posts").appendChild(node);
-
-let node2 = document.createElement("li");
-let textnode2 = document.createTextNode("Fire");
-node2.appendChild(textnode2);
-document.getElementById("list_of_top_posts").appendChild(node2);
-
-
-function createPost(title, content)
-{
-  let reddit_post_node = document.createElement("li");
-  let h3_node = document.createElement("h3");
-  h3_node.innerHTML = title;
-  reddit_post_node.appendChild(h3_node);
-  let content_node = document.createElement("table");
-  content_node.innerHTML = content
-  reddit_post_node.appendChild(content_node)
-  reddit_post_node.appendChild(linebreak)
-
-  document.getElementById("list_of_top_posts").appendChild(reddit_post_node);
-}
-
-createPost("test title", "test content");
-createPost("new title", "asd content");
-createPost("old title", "zxc content");
-createPost("qwe title", "fsghjkasmonqrsh");
+var express = require('express');
+var pg = require("pg");
+var app = express();
+ 
+var connectionString = "postgres://allen:123123qwer@104.155.165.207:5432/reddit_db";
+ 
+app.get('/', function (req, res, next) {
+    pg.connect(connectionString,function(err,client,done) {
+        if(err){
+            console.log("not able to get connection "+ err);
+            res.status(400).send(err);
+        } 
+        //client.query('SELECT * FROM top_posts WHERE top_rank <= $1 ORDER BY top_rank_achieved DESC;', [10], function(err,result) {
+        client.query('SELECT * FROM top_posts WHERE top_rank <= $1 ORDER BY time_top_rank_achieved DESC', [10], function(err,result) {
+            done(); // closing the connection;
+            if(err){
+                console.log(err);
+                res.status(400).send(err);
+            }
+	    let returnValue = "";
+	    for (let post_index = 0; post_index < result.rows.length; ++post_index)
+	    {
+		returnValue += "<li><h3>" + result.rows[post_index].title + "</h3>" + result.rows[post_index].content + "<br /></li>";
+	    }
+	    res.status(200).send("<ol>" + returnValue + "</ol>");
+        });
+    });
+});
+ 
+app.listen(4000, function () {
+    console.log('Server is running.. on Port 4000');
+});
