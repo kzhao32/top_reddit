@@ -17,7 +17,7 @@ app.get('/', function (req, res, next) {
                 res.status(400).send(err);
             }
 	    let returnValue = "";
-	    for (let post_index = 0; post_index < result.rows.length; ++post_index)
+	    for (let post_index = 0; post_index < Math.min(result.rows.length, 500); ++post_index)
 	    {
 		returnValue += "<li><h3>" + result.rows[post_index].title + "</h3>" + result.rows[post_index].content + "<br /></li>";
 	    }
