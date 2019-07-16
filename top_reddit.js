@@ -10,8 +10,7 @@ app.get('/', function (req, res, next) {
             console.log("not able to get connection "+ err);
             res.status(400).send(err);
         } 
-        //client.query('SELECT * FROM top_posts WHERE top_rank <= $1 ORDER BY top_rank_achieved DESC;', [10], function(err,result) {
-        client.query('SELECT * FROM top_posts WHERE top_rank <= $1 ORDER BY time_top_rank_achieved DESC', [10], function(err,result) {
+        client.query('SELECT * FROM top_posts WHERE top_rank <= $1 ORDER BY time_top_rank_achieved DESC, top_rank ASC', [10], function(err,result) {
             done(); // closing the connection;
             if(err){
                 console.log(err);
