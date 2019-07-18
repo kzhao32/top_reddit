@@ -1,7 +1,7 @@
 # top_reddit
 
 ## TODO:
-1. move website back to port 80 and let's encrypt
+1. check next-js with postgresql and graphQL and hasura
 2. improve UI and autoplay video. or autoshow images
 3. Set up cert bot automated renewal.
 
@@ -15,3 +15,5 @@
 3. python3 -m pip install --user bs4 psycopg2-binary
 4. python3 top_reddit_scrape.py
 5. do something like http://www.javascriptpoint.com/nodejs-postgresql-tutorial-example/ to start node js server
+6. start server with "sudo npm start" ctrl+C just to type in password, then start server again with "sudo npm start &"
+7. visit https://topreddit.duckdns.org/?top_rank=10
