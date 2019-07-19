@@ -2,8 +2,9 @@
 
 ## TODO:
 1. check next-js with postgresql and graphQL and hasura
-2. improve UI and autoplay video. or autoshow images
-3. Set up cert bot automated renewal.
+2. improve UI and autoplay gfycat videos at line 39 of server.js. maybe append mp4 extension.
+3. fix this repo file directory
+4. Set up cert bot automated renewal
 
 * Write the front end with ReactJS (https://reactjs.org/).
 * If using github pages or gitlab pages to avoid additional costs, we'd need to somehow create a static HTML file from the data on a regular basis and then push that file to the website repository to simulate a dynamic website. Need more research if going this route.

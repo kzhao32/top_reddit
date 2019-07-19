@@ -1,0 +1,26 @@
+body {
+  color: #00FF00;
+  background-color: black;
+}
+
+body a h3 {
+  color: #D7DADC;
+}
+
+body a:visited h3 {
+  color: #6f7071;
+}
+
+body a {
+  color: #6f7071;
+}
+
+img {
+  max-width: 100%;
+  max-height: 450px;
+}
+
+video {
+  max-width: 100%;
+  max-height: 450px;
+}
