@@ -2,7 +2,7 @@ var express = require('express');
 var pg = require("pg");
 var app = express();
 
-const WEBSITE_URL = "https://topreddit.duckdns.org/";
+const WEBSITE_URL = "https://topreddit.duckdns.org";
 //const WEBSITE_URL = "http://localhost:4000/";
 
 var connectionString = "postgres://allen:123123qwer@104.155.165.207:5432/reddit_db";
@@ -79,27 +79,27 @@ function get_subreddit(req, res, next, subreddit) {
                 <meta charset='UTF-8' />\
                 <meta name='viewport' content='width=device-width, initial-scale=1' />\
                 <title>Top Reddit Posts</title>\
-                <link rel='stylesheet' type='text/css' href='server.css' />\
+                <link rel='stylesheet' type='text/css' href='" + WEBSITE_URL + "/server.css' />\
                 <div>\
                     <div class='dropdown'>\
                         <button class='dropbtn'>num_posts</button>\
                         <div class='dropdown-content'>\
-                            <a href='" + WEBSITE_URL + "?num_posts=" +   1 + "&top_rank=" + top_rank + "&count=" + count + "&after=" + after + "'>  1</a>\
-                            <a href='" + WEBSITE_URL + "?num_posts=" +  10 + "&top_rank=" + top_rank + "&count=" + count + "&after=" + after + "'> 10</a>\
-                            <a href='" + WEBSITE_URL + "?num_posts=" +  25 + "&top_rank=" + top_rank + "&count=" + count + "&after=" + after + "'> 25</a>\
-                            <a href='" + WEBSITE_URL + "?num_posts=" + 100 + "&top_rank=" + top_rank + "&count=" + count + "&after=" + after + "'>100</a>\
-                            <a href='" + WEBSITE_URL + "?num_posts=" + 500 + "&top_rank=" + top_rank + "&count=" + count + "&after=" + after + "'>500</a>\
+                            <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" +   1 + "&top_rank=" + top_rank + "&count=" + count + "&after=" + after + "'>  1</a>\
+                            <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" +  10 + "&top_rank=" + top_rank + "&count=" + count + "&after=" + after + "'> 10</a>\
+                            <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" +  25 + "&top_rank=" + top_rank + "&count=" + count + "&after=" + after + "'> 25</a>\
+                            <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + 100 + "&top_rank=" + top_rank + "&count=" + count + "&after=" + after + "'>100</a>\
+                            <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + 500 + "&top_rank=" + top_rank + "&count=" + count + "&after=" + after + "'>500</a>\
                         </div>\
                     </div>\
                     <div class='dropdown'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>\
                     <div class='dropdown'>\
                         <button class='dropbtn'>&nbsp;&nbsp;top_rank&nbsp;&nbsp;</button>\
                         <div class='dropdown-content'>\
-                            <a href='" + WEBSITE_URL + "?num_posts=" + num_posts + "&top_rank=" +   1 + "&count=" + count + "&after=" + after + "'>  1</a>\
-                            <a href='" + WEBSITE_URL + "?num_posts=" + num_posts + "&top_rank=" +   5 + "&count=" + count + "&after=" + after + "'>  5</a>\
-                            <a href='" + WEBSITE_URL + "?num_posts=" + num_posts + "&top_rank=" +  10 + "&count=" + count + "&after=" + after + "'> 10</a>\
-                            <a href='" + WEBSITE_URL + "?num_posts=" + num_posts + "&top_rank=" +  25 + "&count=" + count + "&after=" + after + "'> 25</a>\
-                            <a href='" + WEBSITE_URL + "?num_posts=" + num_posts + "&top_rank=" + 100 + "&count=" + count + "&after=" + after + "'>100</a>\
+                            <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + num_posts + "&top_rank=" +   1 + "&count=" + count + "&after=" + after + "'>  1</a>\
+                            <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + num_posts + "&top_rank=" +   5 + "&count=" + count + "&after=" + after + "'>  5</a>\
+                            <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + num_posts + "&top_rank=" +  10 + "&count=" + count + "&after=" + after + "'> 10</a>\
+                            <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + num_posts + "&top_rank=" +  25 + "&count=" + count + "&after=" + after + "'> 25</a>\
+                            <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + num_posts + "&top_rank=" + 100 + "&count=" + count + "&after=" + after + "'>100</a>\
                         </div>\
                     </div>\
             <br />\
@@ -140,8 +140,6 @@ function get_subreddit(req, res, next, subreddit) {
                 // Concatenate to HTML
                 post_updated = result.rows[post_index].updated.toISOString().replace("T", " "); 
                 category = result.rows[post_index].category;
-		//console.log("subreddit = '" + category + "'");
-                //console.log(result.rows[post_index].content.indexOf('<a href="https://www.reddit.com/r/' + category + '">'));
 		returnValue += "\
                     <li>\
                         <a href='" + result.rows[post_index].link + "'>\
@@ -149,7 +147,7 @@ function get_subreddit(req, res, next, subreddit) {
                         </a>" + 
                         result.rows[post_index].content
 			    .replace("<br/>", " on " + post_updated.substring(0, post_updated.lastIndexOf(":")) + "<br/>")
-		    	    //.replace('<a href="https://www.reddit.com/r/' + category + '">', '<a href="' + WEBSITE_URL + 'r/' + category + '/">')
+		    	    .replace('<a href="https://www.reddit.com/r/' + category + '/">', '<a href="' + WEBSITE_URL + '/r/' + category + '/">')
 			    .replace("[comments]</a></span>", "[comments]</a></span> &#32; <span>[top_rank=" + result.rows[post_index].top_rank + "]</span>") +
                         mediaTag +
                         "<br />\
@@ -160,10 +158,22 @@ function get_subreddit(req, res, next, subreddit) {
         </div>";
             // returnValue += "<input type=\"text\"><button type=\"button\">Start Scraping Subreddit</button>" + '<form action="/team_name_url/" method="post"> <label for="team_name">Enter name: </label>        <input id="team_name" type="text" name="name_field" value="Default name for team.">            <input type="submit" value="OK">        </form>' + " next count = " + (parseInt(count) + post_index) + " and next after = " + result.rows[post_index-1].post_id;
             // Next page anchor tag
-            returnValue += "\
-                <div>\
-                    <a class='next_page' href='" + WEBSITE_URL + "?num_posts=" + num_posts + "&top_rank=" + top_rank + "&count=" + (parseInt(count) + post_index) + "&after=" + result.rows[post_index-1].post_id + "'>Next Page</a>\
-                </div>";
+            if (post_index > 0) {
+                if (result.rows.length < num_posts) {
+		    returnValue += "\
+			<div>\
+			    No additional posts found.\
+			</div>";
+		}
+		else {
+                    returnValue += "\
+                        <div>\
+                            <a class='next_page' href='" + WEBSITE_URL + "/r/" + subreddit + "/" + "?num_posts=" + num_posts + "&top_rank=" + top_rank + "&count=" + (parseInt(count) + post_index) + "&after=" + result.rows[post_index-1].post_id + "'>Next Page</a>\
+                        </div>";
+		}
+	    } else {
+		returnValue += "<div>Sorry, no posts found</div>";
+	    }
             res.status(200).send(returnValue);
         });
     });

@@ -1,11 +1,9 @@
 # top_reddit
 
 ## TODO:
-1. improve UI and autoplay gfycat videos at line 39 of server.js. maybe append mp4 extension
-2. fix this repo file directory
-3. Set up cert bot automated renewal
-4. add drop down menu to further customize viewing
-5. scrape other subreddits
+1. Fix audio to sync with video.
+2. Set up cert bot automated renewal
+3. Combine subreddits like "https://topreddit.duckdns.org/r/aww+gifs".
 
 ## to get started run:
 1. sudo apt update
