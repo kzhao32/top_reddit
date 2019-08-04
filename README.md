@@ -4,6 +4,7 @@
 1. Fix audio to sync with video.
 2. Set up cert bot automated renewal
 3. Combine subreddits like "https://topreddit.duckdns.org/r/aww+gifs".
+4. Create a 404 page for URLs like "https://topreddit.duckdns.org/eawsfnan".
 
 ## to get started run:
 1. sudo apt update
