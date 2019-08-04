@@ -6,7 +6,7 @@ const WEBSITE_URL = "https://topreddit.duckdns.org";
 //const WEBSITE_URL = "http://localhost:4000/";
 
 var connectionString = "postgres://allen:123123qwer@104.155.165.207:5432/reddit_db";
-let default_config = new Map([["num_posts", 25], ["top_rank", 10], ["count", 0], ["after", null]]);
+let default_config = new Map([["num_posts", 25], ["top_rank", 10], ["top_rank_subreddit", 25], ["count", 0], ["after", null]]);
 
 app.use(express.static(__dirname));
 
@@ -48,7 +48,7 @@ function get_subreddit(req, res, next, subreddit) {
         }
         let top_rank = req.query.top_rank;
         if (top_rank == null || top_rank < 1) {
-            top_rank = default_config.get("top_rank");
+            top_rank = default_config.get(subreddit === "popular" ? "top_rank" : "top_rank_subreddit");
         }
             let count = req.query.count;
         if (count == null || count < 1) {
