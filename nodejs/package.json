@@ -1,0 +1,16 @@
+{
+  "name": "nodejs-test",
+  "author": "Javascript Point",
+  "dependencies": {
+    "express": "^4.17.1",
+    "pg": "^6.4.2"
+  },
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "devstart": "npm start nodemon"
+  },
+  "license": "ISC",
+  "description": ""
+}
