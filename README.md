@@ -5,6 +5,7 @@
 2. Set up cert bot automated renewal
 3. Combine subreddits like "https://topreddit.duckdns.org/r/aww+gifs".
 4. Create a 404 page for URLs like "https://topreddit.duckdns.org/eawsfnan".
+5. Create a read-only user for the database (maybe a user with only SELECT privileges).
 
 ## to get started run:
 1. sudo apt update

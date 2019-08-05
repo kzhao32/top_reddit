@@ -3,10 +3,17 @@ var pg = require("pg");
 var app = express();
 
 const WEBSITE_URL = "https://topreddit.duckdns.org";
-//const WEBSITE_URL = "http://localhost:4000/";
+const PORT = 4000;
 
-var connectionString = "postgres://allen:123123qwer@104.155.165.207:5432/reddit_db";
-let default_config = new Map([["num_posts", 25], ["top_rank", 10], ["top_rank_subreddit", 25], ["count", 0], ["after", null]]);
+var connectionString = "postgres://allen:123123qwer \
+    @104.155.165.207:5432/reddit_db";
+let default_config = new Map([
+    ["num_posts", 25],
+    ["top_rank", 10],
+    ["top_rank_subreddit", 25],
+    ["count", 0],
+    ["after", null]
+]);
 
 app.use(express.static(__dirname));
 
@@ -26,8 +33,8 @@ app.get('/r/:subreddit', function(req, res, next) {
 
 app.get('/', get_popular);
 
-app.listen(4000, function() {
-    console.log("Server is running.. on Port 4000");
+app.listen(PORT, function() {
+    console.log(`Server is running.. on Port ${PORT}`);
 });
 
 function get_popular(req, res, next) {
@@ -48,7 +55,9 @@ function get_subreddit(req, res, next, subreddit) {
         }
         let top_rank = req.query.top_rank;
         if (top_rank == null || top_rank < 1) {
-            top_rank = default_config.get(subreddit === "popular" ? "top_rank" : "top_rank_subreddit");
+            top_rank = default_config.get(
+                subreddit === "popular" ? "top_rank" : "top_rank_subreddit"
+            );
         }
             let count = req.query.count;
         if (count == null || count < 1) {
@@ -138,13 +147,13 @@ function get_subreddit(req, res, next, subreddit) {
                     result.rows[post_index].content = result.rows[post_index].content.replace(/<img[^>]+>/, "");
                 }
                 // Concatenate to HTML
-                post_updated = result.rows[post_index].updated.toISOString().replace("T", " "); 
+                post_updated = result.rows[post_index].updated.toISOString().replace("T", " ");
                 category = result.rows[post_index].category;
 		returnValue += "\
                     <li>\
                         <a href='" + result.rows[post_index].link + "'>\
                             <h2>" + result.rows[post_index].title + "</h2>\
-                        </a>" + 
+                        </a>" +
                         result.rows[post_index].content
 			    .replace("<br/>", " on " + post_updated.substring(0, post_updated.lastIndexOf(":")) + "<br/>")
 		    	    .replace('<a href="https://www.reddit.com/r/' + category + '/">', '<a href="' + WEBSITE_URL + '/r/' + category + '/">')
