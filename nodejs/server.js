@@ -2,12 +2,13 @@ var express = require('express');
 var pg = require("pg");
 var app = express();
 
+// Constants
 const WEBSITE_URL = "https://topreddit.duckdns.org";
 const PORT = 4000;
 
-var connectionString = "postgres://allen:123123qwer \
+const CONNECTION_STRING = "postgres://allen:123123qwer \
     @104.155.165.207:5432/reddit_db";
-let default_config = new Map([
+const DEFAULT_CONFIG = new Map([
     ["num_posts", 25],
     ["top_rank", 10],
     ["top_rank_subreddit", 25],
@@ -15,8 +16,10 @@ let default_config = new Map([
     ["after", null]
 ]);
 
+// Set the directory containing files.
 app.use(express.static(__dirname));
 
+// Route paths
 app.get('/r', function(req, res, next) {
     res.redirect("/r/popular");
 });
@@ -33,51 +36,61 @@ app.get('/r/:subreddit', function(req, res, next) {
 
 app.get('/', get_popular);
 
+// Starts the HTTP server listening for connections.
 app.listen(PORT, function() {
     console.log(`Server is running.. on Port ${PORT}`);
 });
 
+
+// Functions (TODO: need a more descriptive name here)
 function get_popular(req, res, next) {
     get_subreddit(req, res, next, "popular")
 }
 
+
 function get_subreddit(req, res, next, subreddit) {
-    pg.connect(connectionString, function(err, client, done) {
+    pg.connect(CONNECTION_STRING, function(err, client, done) {
         if (err) {
             console.log("not able to get connection " + err);
             res.status(400).send(err);
         }
+
         // Query parameters
-	let table_name = subreddit === "popular" ? "top_posts" : "subreddits";
+        let table_name = subreddit === "popular" ? "top_posts" : "subreddits";
         let num_posts = req.query.num_posts;
         if (num_posts == null || num_posts < 1) {
-            num_posts = default_config.get("num_posts");
+            num_posts = DEFAULT_CONFIG.get("num_posts");
         }
         let top_rank = req.query.top_rank;
         if (top_rank == null || top_rank < 1) {
-            top_rank = default_config.get(
+            top_rank = DEFAULT_CONFIG.get(
                 subreddit === "popular" ? "top_rank" : "top_rank_subreddit"
             );
         }
-            let count = req.query.count;
+        let count = req.query.count;
         if (count == null || count < 1) {
-            count = default_config.get("count");
+            count = DEFAULT_CONFIG.get("count");
         }
         let after = req.query.after;
         let after_sql = "";
         if (after != null && after != "undefined") {
             after_sql = "\
-                AND (time_top_rank_achieved < (SELECT time_top_rank_achieved FROM " + table_name + " WHERE post_id = '" + after + "') \
-                    OR (time_top_rank_achieved = (SELECT time_top_rank_achieved FROM " + table_name + " WHERE post_id = '" + after + "') \
-                        AND top_rank > (SELECT top_rank FROM " + table_name + " WHERE post_id = '" + after + "'))) ";
+                AND (time_top_rank_achieved < (SELECT time_top_rank_achieved \
+                    FROM " + table_name + " WHERE post_id = '" + after + "') \
+                OR (time_top_rank_achieved = (SELECT time_top_rank_achieved \
+                    FROM " + table_name + " WHERE post_id = '" + after + "') \
+                AND top_rank > (SELECT top_rank FROM " + table_name + " \
+                WHERE post_id = '" + after + "'))) ";
         }
+
         client.query("\
             SELECT * \
             FROM " + table_name + " \
-            WHERE top_rank <= " + top_rank +
-		(subreddit === "popular" ? "" : "AND category = '" + subreddit + "' ") +
-            after_sql + "\
-            ORDER BY time_top_rank_achieved DESC, top_rank ASC", function(err, result) {
+            WHERE top_rank <= " + top_rank + (subreddit === "popular"
+                ? "" : "AND category = '" + subreddit + "' ") + after_sql + "\
+            ORDER BY time_top_rank_achieved DESC, top_rank ASC",
+            // Do we need a semicolon to end the SQL query above?
+            function(err, result) {
             done(); // closing the connection;
             if (err) {
                 console.log(err);
@@ -111,10 +124,10 @@ function get_subreddit(req, res, next, subreddit) {
                             <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + num_posts + "&top_rank=" + 100 + "&count=" + count + "&after=" + after + "'>100</a>\
                         </div>\
                     </div>\
-            <br />\
-        </div>\
+                    <br />\
+                </div>\
                 <div>\
-            <ol start='" + (parseInt(count) + 1) + "'>";
+                    <ol start='" + (parseInt(count) + 1) + "'>";
             let re = /"https?:\/\/(i\.redd\.it|v\.redd\.it|i\.imgur\.com|gfycat\.com)\/[^"]*"/;
             let match = "";
             let mediaTag = "";
@@ -149,40 +162,38 @@ function get_subreddit(req, res, next, subreddit) {
                 // Concatenate to HTML
                 post_updated = result.rows[post_index].updated.toISOString().replace("T", " ");
                 category = result.rows[post_index].category;
-		returnValue += "\
+                returnValue += "\
                     <li>\
                         <a href='" + result.rows[post_index].link + "'>\
                             <h2>" + result.rows[post_index].title + "</h2>\
-                        </a>" +
-                        result.rows[post_index].content
-			    .replace("<br/>", " on " + post_updated.substring(0, post_updated.lastIndexOf(":")) + "<br/>")
-		    	    .replace('<a href="https://www.reddit.com/r/' + category + '/">', '<a href="' + WEBSITE_URL + '/r/' + category + '/">')
-			    .replace("[comments]</a></span>", "[comments]</a></span> &#32; <span>[top_rank=" + result.rows[post_index].top_rank + "]</span>") +
-                        mediaTag +
+                        </a>" + result.rows[post_index].content
+                            .replace("<br/>", " on " + post_updated.substring(0, post_updated.lastIndexOf(":")) + "<br/>")
+                            .replace('<a href="https://www.reddit.com/r/' + category + '/">', '<a href="' + WEBSITE_URL + '/r/' + category + '/">')
+                            .replace("[comments]</a></span>", "[comments]</a></span> &#32; <span>[top_rank=" + result.rows[post_index].top_rank + "]</span>") + mediaTag +
                         "<br />\
                     </li>";
             }
             returnValue += "\
-            </ol>\
-        </div>";
+                </ol>\
+            </div>";
             // returnValue += "<input type=\"text\"><button type=\"button\">Start Scraping Subreddit</button>" + '<form action="/team_name_url/" method="post"> <label for="team_name">Enter name: </label>        <input id="team_name" type="text" name="name_field" value="Default name for team.">            <input type="submit" value="OK">        </form>' + " next count = " + (parseInt(count) + post_index) + " and next after = " + result.rows[post_index-1].post_id;
             // Next page anchor tag
             if (post_index > 0) {
                 if (result.rows.length < num_posts) {
-		    returnValue += "\
-			<div>\
-			    No additional posts found.\
-			</div>";
-		}
-		else {
-                    returnValue += "\
-                        <div>\
-                            <a class='next_page' href='" + WEBSITE_URL + "/r/" + subreddit + "/" + "?num_posts=" + num_posts + "&top_rank=" + top_rank + "&count=" + (parseInt(count) + post_index) + "&after=" + result.rows[post_index-1].post_id + "'>Next Page</a>\
-                        </div>";
-		}
-	    } else {
-		returnValue += "<div>Sorry, no posts found</div>";
-	    }
+            returnValue += "\
+            <div>\
+                No additional posts found.\
+            </div>";
+        }
+        else {
+            returnValue += "\
+                <div>\
+                    <a class='next_page' href='" + WEBSITE_URL + "/r/" + subreddit + "/" + "?num_posts=" + num_posts + "&top_rank=" + top_rank + "&count=" + (parseInt(count) + post_index) + "&after=" + result.rows[post_index-1].post_id + "'>Next Page</a>\
+                </div>";
+        }
+        } else {
+        returnValue += "<div>Sorry, no posts found</div>";
+        }
             res.status(200).send(returnValue);
         });
     });

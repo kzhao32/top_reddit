@@ -6,6 +6,7 @@
 3. Combine subreddits like "https://topreddit.duckdns.org/r/aww+gifs".
 4. Create a 404 page for URLs like "https://topreddit.duckdns.org/eawsfnan".
 5. Create a read-only user for the database (maybe a user with only SELECT privileges).
+6. Break up the get_reddit function into smaller, manageable functions for improved readability.
 
 ## to get started run:
 1. sudo apt update
