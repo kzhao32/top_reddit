@@ -180,20 +180,21 @@ function get_subreddit(req, res, next, subreddit) {
             // Next page anchor tag
             if (post_index > 0) {
                 if (result.rows.length < num_posts) {
-            returnValue += "\
-            <div>\
-                No additional posts found.\
-            </div>";
-        }
-        else {
-            returnValue += "\
-                <div>\
-                    <a class='next_page' href='" + WEBSITE_URL + "/r/" + subreddit + "/" + "?num_posts=" + num_posts + "&top_rank=" + top_rank + "&count=" + (parseInt(count) + post_index) + "&after=" + result.rows[post_index-1].post_id + "'>Next Page</a>\
-                </div>";
-        }
-        } else {
-        returnValue += "<div>Sorry, no posts found</div>";
-        }
+                    returnValue += "\
+                    <div>\
+                        No additional posts found.\
+                    </div>";
+                }
+                else {
+                    returnValue += "\
+                        <div>\
+                            <a class='next_page' href='" + WEBSITE_URL + "/r/" + subreddit + "/" + "?num_posts=" + num_posts + "&top_rank=" + top_rank + "&count=" + (parseInt(count) + post_index) + "&after=" + result.rows[post_index-1].post_id + "'>Next Page</a>\
+                        </div>";
+                }
+            }
+            else {
+                returnValue += "<div>Sorry, no posts found</div>";
+            }
             res.status(200).send(returnValue);
         });
     });
