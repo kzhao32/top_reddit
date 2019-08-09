@@ -12,7 +12,7 @@ if sys.version_info[0] < 3:
 else:
     from urllib.request import urlopen
 
-import top_reddit_backend
+import backend
 
 TABLE_NAME = "top_posts"
 
@@ -42,17 +42,13 @@ def main():
 
     # Connect to SQL server.
     try:
-        connection = psycopg2.connect(user = "allen",
-                                    password = "123123qwer",
-                                    host = "104.155.165.207",
-                                    port = "5432",
-                                    database = "reddit_db")
+        connection = backend.get_connection()
         cursor = connection.cursor()
         print("PostgreSQL connection is opened; ", end=" ")
 
         # Create table if it doesn't already exists.
-        if not top_reddit_backend.is_table_exists(cursor, TABLE_NAME):
-            top_reddit_backend.create_table(cursor, TABLE_NAME)
+        if not backend.is_table_exists(cursor, TABLE_NAME):
+            backend.create_table(cursor, TABLE_NAME)
 
         # Loop to scrape reddit entries.
         post_id = ""
@@ -86,20 +82,18 @@ def main():
                 # print("~~~Entry end~~~~~~~~~~~~~~~~~~~~~~~\n")
 
                 # Add record into table.
-                top_reddit_backend.modify_record(cursor, TABLE_NAME, post_id, rank_counter+1, category, title, link, author_name, updated, content)
+                backend.modify_record(cursor, TABLE_NAME, post_id, rank_counter+1, category, title, link, author_name, updated, content)
                 rank_counter = rank_counter + 1
             num_entries_remaining_to_scrape = num_entries_remaining_to_scrape - len(entries)
 
         connection.commit() # commit update to sql database
+        print("committed successfully; ", end=" ")
     
     except (Exception, psycopg2.Error) as error :
         print("Error while connecting to PostgreSQL; ", error, end=" ")
     finally:
         # Closing database connection.
-        if(connection):
-            cursor.close()
-            connection.close()
-            print("PostgreSQL connection is closed; ", end=" ")
+        backend.close_connection(connection)
     print("Done with scrape;")
 
 

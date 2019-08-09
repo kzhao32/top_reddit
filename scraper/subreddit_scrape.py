@@ -12,7 +12,7 @@ if sys.version_info[0] < 3:
 else:
     from urllib.request import urlopen
 
-import top_reddit_backend
+import backend
 
 TABLE_NAME = "subreddits"
 
@@ -45,21 +45,17 @@ def main():
 
     # Connect to SQL server.
     try:
-        connection = psycopg2.connect(user = "allen",
-                                    password = "123123qwer",
-                                    host = "104.155.165.207",
-                                    port = "5432",
-                                    database = "reddit_db")
+        connection = backend.get_connection()
         cursor = connection.cursor()
         print("PostgreSQL connection is opened; ", end=" ")
 
         # Create table if it doesn't already exists.
-        if not top_reddit_backend.is_table_exists(cursor, TABLE_NAME):
-            top_reddit_backend.create_table(cursor, TABLE_NAME)
+        if not backend.is_table_exists(cursor, TABLE_NAME):
+            backend.create_table(cursor, TABLE_NAME)
 
         # Scrape every subreddit of posts that reach front page.
         post_id = ""
-        subreddits = top_reddit_backend.get_subreddits(cursor, "top_posts")
+        subreddits = backend.get_subreddits(cursor, "top_posts")
         subreddits_counter = 0
         for subreddit in subreddits:
             print(str(subreddits_counter) + ": scraping " + subreddit[0] + ".")
@@ -94,7 +90,7 @@ def main():
                 # print("~~~Entry end~~~~~~~~~~~~~~~~~~~~~~~\n")
 
                 # Add entry as a record into table.
-                top_reddit_backend.modify_record(cursor, TABLE_NAME, post_id, rank_counter+1, category, title, link, author_name, updated, content)
+                backend.modify_record(cursor, TABLE_NAME, post_id, rank_counter+1, category, title, link, author_name, updated, content)
                 rank_counter = rank_counter + 1
             # Commit updates to database every 25 subreddits.
             if (subreddits_counter % 25 == 0):
@@ -108,10 +104,7 @@ def main():
         print("Error while connecting to PostgreSQL; ", error, end=" ")
     finally:
         # Close database connection.
-        if(connection):
-            cursor.close()
-            connection.close()
-            print("PostgreSQL connection is closed; ", end=" ")
+        backend.close_connection(connection)
     print(str(datetime.datetime.now()) + '; ', end=" ") # log time.
     print("Done with scrape;")
 
