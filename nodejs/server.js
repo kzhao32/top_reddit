@@ -6,8 +6,8 @@ var app = express();
 const WEBSITE_URL = "https://topreddit.duckdns.org";
 const PORT = 4000;
 
-const CONNECTION_STRING = "postgres://allen:123123qwer \
-    @104.155.165.207:5432/reddit_db";
+const CONNECTION_STRING = "postgres://read_only:123123qwer" +
+    "@104.155.165.207:5432/reddit_db";
 const DEFAULT_CONFIG = new Map([
     ["num_posts", 25],
     ["top_rank", 10],
@@ -30,7 +30,15 @@ app.get('/r/:subreddit', function(req, res, next) {
         get_subreddit(req, res, next, subreddit);
     }
     else {
-        get_subreddit(req, res, next, subreddit);
+        if (subreddit.split('+').includes("popular")) {
+            subreddit = subreddit.split('+');
+	    subreddit.splice(subreddit.indexOf("popular"), 1);
+	    subreddit = subreddit.join('+');
+            res.redirect("/r/" + subreddit);
+	}
+	else {
+	    get_subreddit(req, res, next, subreddit);
+	}
     }
 });
 
@@ -86,8 +94,8 @@ function get_subreddit(req, res, next, subreddit) {
         client.query("\
             SELECT * \
             FROM " + table_name + " \
-            WHERE top_rank <= " + top_rank + (subreddit === "popular"
-                ? "" : "AND category = '" + subreddit + "' ") + after_sql + "\
+            WHERE top_rank <= " + top_rank + " " + (subreddit === "popular"
+                ? "" : "AND category IN ('" + subreddit.split('+').join("', '") + "') ") + after_sql + "\
             ORDER BY time_top_rank_achieved DESC, top_rank ASC",
             // Do we need a semicolon to end the SQL query above?
             function(err, result) {
