@@ -3,8 +3,7 @@
 ## TODO:
 1. Fix audio to sync with video.
 2. Set up cert bot automated renewal
-3. Create a 404 page for URLs like "https://topreddit.duckdns.org/eawsfnan".
-4. Break up the get_reddit function into smaller, manageable functions for improved readability.
+3. Break up the get_reddit function into smaller, manageable functions for improved readability.
 
 ## to get started run:
 1. sudo apt update

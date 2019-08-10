@@ -1,5 +1,6 @@
 var express = require('express');
 var pg = require("pg");
+const pug = require('pug');
 var app = express();
 
 // Constants
@@ -207,3 +208,10 @@ function get_subreddit(req, res, next, subreddit) {
         });
     });
 }
+
+// Handle 404
+app.use(function(req, res) {
+    res.status(400).send("404. Page not found!"); // 400 = bad request
+});
+
+
