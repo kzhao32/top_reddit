@@ -190,13 +190,34 @@ function get_HTML_posts(count, result, num_posts) {
                 mediaTag = "<iframe src=" + match[0].replace("gfycat.com", "gfycat.com/ifr") + " frameborder='0' allowfullscreen></iframe>"
             } else if (match[0].includes("v.redd.it")) { // reddit videos
                 mediaTag = "\
-                    <video autoplay controls muted loop>\
+                    <video id=\"" + result.rows[post_index].post_id + "_video\" autoplay controls muted loop>\
                         <source src=" + match[0].replace(/\"$/, "/DASH_720\"") + " />\
                         <source src=" + match[0].replace(/\"$/, "/DASH_480\"") + " />\
                         <source src=" + match[0].replace(/\"$/, "/DASH_240\"") + " />\
                         <source src=" + match[0].replace(/\"$/,  "/DASH_96\"") + " />\
-                    </video>"; // only replace the " at the end
-                // audio does not sync <audio controls autoplay><source src=" + match[0].replace(/\"$/, "/audio\"") + " type=\"audio/mp3\"></audio>";
+			<audio id=\"" + result.rows[post_index].post_id + "_audio\" controls loop>\
+			    <source src=" + match[0].replace(/\"$/, "/audio\"") + " type=\"audio/mp3\" />\
+			</audio>\
+                    </video>\
+		    <script>\
+			console.log(\"testing, should show in web browser console\");\n\
+			var myvideo = document.getElementById(\"" + result.rows[post_index].post_id + "_video\");\n\
+			var myaudio = document.getElementById(\"" + result.rows[post_index].post_id + "_audio\");\n\
+			var change_time_state = true;\n\
+\n\
+			myvideo.onplay = function(){\n\
+			    myaudio.play();\n\
+			    if(change_time_state){\n\
+				myaudio.currentTime = myvideo.currentTime;\n\
+				change_time_state = false;\n\
+			    }\n\
+			}\n\
+\n\
+			myvideo.onpause = function(){\n\
+			    myaudio.pause();\n\
+			    change_time_state = true;\n\
+			}\n\
+		    </script>";
             }
         }
         if (mediaTag !== "") {

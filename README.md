@@ -1,8 +1,9 @@
 # top_reddit
 
 ## TODO:
-1. Fix audio to sync with video.
-2. Set up cert bot automated renewal
+1. Fix audio to sync with video. In progress: still need to fix audio looping, and multiple videos on page. Try using https://stackoverflow.com/questions/25105414/html5-video-onmuted-and-onloop-event/25106820#25106820
+2. Need to add audio control.
+3. Set up cert bot automated renewal
 
 ## to get started run:
 1. sudo apt update
