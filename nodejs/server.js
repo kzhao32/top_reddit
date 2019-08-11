@@ -27,7 +27,7 @@ app.get('/r', function(req, res, next) {
 
 app.get('/r/:subreddit', function(req, res, next) {
     var subreddit = req.params.subreddit;
-    if (subreddit === "popular") {
+    if (subreddit === "popular" || subreddit === "nsfw") {
         get_subreddit(req, res, next, subreddit);
     }
     else {
@@ -43,19 +43,15 @@ app.get('/r/:subreddit', function(req, res, next) {
     }
 });
 
-app.get('/', get_popular);
+app.get('/', function(req, res, next) {
+    get_subreddit(req, res, next, "popular")
+    
+});
 
 // Starts the HTTP server listening for connections.
 app.listen(PORT, function() {
     console.log(`Server is running.. on Port ${PORT}`);
 });
-
-
-// Functions (TODO: need a more descriptive name here)
-function get_popular(req, res, next) {
-    get_subreddit(req, res, next, "popular")
-}
-
 
 function get_subreddit(req, res, next, subreddit) {
     pg.connect(CONNECTION_STRING, function(err, client, done) {
@@ -66,9 +62,12 @@ function get_subreddit(req, res, next, subreddit) {
         client.query("\
             SELECT * \
                 FROM " + table_name + " \
-                WHERE top_rank <= " + top_rank + " " + (subreddit === "popular"
-                    ? "" : "AND category IN ('" + subreddit.split('+').join("', '") + "') ") + after_sql + "\
-                ORDER BY time_top_rank_achieved DESC, top_rank ASC",
+                WHERE top_rank <= " + top_rank + " " +
+		    (subreddit === "popular" || subreddit === "nsfw" ?
+                        "" : 
+                        "AND category IN ('" + subreddit.split('+').join("', '") + "') ") + 
+		    after_sql + "\
+                ORDER BY time_top_rank_achieved DESC, top_rank ASC, updated DESC",
             function(err, result) {
                 get_HTML(done, err, result, res, subreddit, table_name, num_posts, top_rank, count, after, after_sql);
             }
@@ -85,7 +84,7 @@ function check_error(res, err) {
 
 function get_query_parameters(req, subreddit) {
     // Query parameters
-    let table_name = subreddit === "popular" ? "top_posts" : "subreddits";
+    let table_name = subreddit === "popular" ? "top_posts" : (subreddit === "nsfw" ? "nsfw_subreddits" : "subreddits");
     let num_posts = req.query.num_posts;
     if (num_posts == null || num_posts < 1) {
         num_posts = DEFAULT_CONFIG.get("num_posts");
@@ -104,12 +103,26 @@ function get_query_parameters(req, subreddit) {
     let after_sql = "";
     if (after != null && after != "undefined") {
         after_sql = "\
-            AND (time_top_rank_achieved < (SELECT time_top_rank_achieved \
-                FROM " + table_name + " WHERE post_id = '" + after + "') \
-                OR (time_top_rank_achieved = (SELECT time_top_rank_achieved \
-                    FROM " + table_name + " WHERE post_id = '" + after + "') \
-                    AND top_rank > (SELECT top_rank FROM " + table_name + " \
-            WHERE post_id = '" + after + "'))) ";
+            AND (time_top_rank_achieved < (\
+		SELECT time_top_rank_achieved \
+		    FROM " + table_name + " WHERE post_id = '" + after + "') \
+                OR (time_top_rank_achieved = (\
+		    SELECT time_top_rank_achieved \
+			FROM " + table_name + " WHERE post_id = '" + after + "') \
+			AND top_rank > (\
+			    SELECT top_rank FROM " + table_name + " \
+			    WHERE post_id = '" + after + "'))\
+		OR (time_top_rank_achieved = (\
+		    SELECT time_top_rank_achieved \
+			FROM " + table_name + " WHERE post_id = '" + after + "') \
+			AND top_rank = (\
+			    SELECT top_rank FROM " + table_name + " \
+			    WHERE post_id = '" + after + "')\
+			AND updated < (\
+			    SELECT updated FROM " + table_name + " \
+			    WHERE post_id = '" + after + "')\
+		)\
+	    ) ";
     }
     return [ table_name, num_posts, top_rank, count, after, after_sql ];
 }
