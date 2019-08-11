@@ -102,7 +102,8 @@ function get_query_parameters(req, subreddit) {
     let after = req.query.after;
     let after_sql = "";
     if (after != null && after != "undefined") {
-        after_sql = "\
+        // filter posts to older time_top_rank_achieved, lower top_rank, or older updated
+	after_sql = "\
             AND (time_top_rank_achieved < (\
 		SELECT time_top_rank_achieved \
 		    FROM " + table_name + " WHERE post_id = '" + after + "') \
@@ -135,7 +136,7 @@ function get_HTML(done, err, result, res, subreddit, table_name, num_posts, top_
     let return_value = "";
     return_value += get_HTML_header();
     return_value += get_HTML_dropdown_boxes(subreddit, num_posts, top_rank, count, after);
-    [ HTML_posts, post_index ] = get_HTML_posts(count, result, num_posts);
+    [ HTML_posts, post_index ] = get_HTML_posts(subreddit, count, result, num_posts);
     return_value += HTML_posts;
     return_value += get_HTML_next_page_link(post_index, result, num_posts, subreddit, top_rank, count);
     res.status(200).send(return_value);
@@ -180,74 +181,87 @@ function get_HTML_dropdown_boxes(subreddit, num_posts, top_rank, count, after) {
     ";
 }
 
-function get_HTML_posts(count, result, num_posts) {
+function get_HTML_posts(subreddit, count, result, num_posts) {
     return_value = "\
         <div>\
             <ol start='" + (parseInt(count) + 1) + "'>";
     let re = /"https?:\/\/(i\.redd\.it|v\.redd\.it|i\.imgur\.com|gfycat\.com)\/[^"]*"/;
     let match = "";
-    let mediaTag = "";
+    let media_tag = "";
     let imageEnds = [".jpg\"", ".jpeg\"", ".gif\"", ".png\""];
     let post_index = 0; // need post_index after for loop for 'next_page' link
     for ( ; post_index < Math.min(result.rows.length, num_posts); ++post_index) {
-        mediaTag = "";
-        match = result.rows[post_index].content.match(re);
+        media_tag = "";
+        post_content = result.rows[post_index].content;
+        match = post_content.match(re);
         if (match != null && match.length > 0) {
             // media tag depends on whether it's an image, gfycat gif, or reddit video
             if (imageEnds.includes(match[0].slice(match[0].lastIndexOf(".")))) { // images
-                mediaTag = "<img src=" + match[0] + " />";
+                media_tag = "<img src=" + match[0] + " />";
             } else if (match[0].includes("gfycat.com")) { // gfycat gifs
                 if (match[0].indexOf("-") > 0) { // need to omit anything after hyphen for ifr gfycat
                     match[0] = match[0].substr(0, match[0].indexOf("-")) + "\"";
                 }
-                mediaTag = "<iframe src=" + match[0].replace("gfycat.com", "gfycat.com/ifr") + " frameborder='0' allowfullscreen></iframe>"
+                media_tag = "<iframe src=" + match[0].replace("gfycat.com", "gfycat.com/ifr") + " frameborder='0' allowfullscreen></iframe>"
             } else if (match[0].includes("v.redd.it")) { // reddit videos
-                mediaTag = "\
-                    <video id=\"" + result.rows[post_index].post_id + "_video\" autoplay controls muted loop>\
+                post_id = result.rows[post_index].post_id;
+		media_tag = "\
+                    <video id=\"" + post_id + "_video\" autoplay controls muted loop>\
                         <source src=" + match[0].replace(/\"$/, "/DASH_720\"") + " />\
                         <source src=" + match[0].replace(/\"$/, "/DASH_480\"") + " />\
                         <source src=" + match[0].replace(/\"$/, "/DASH_240\"") + " />\
                         <source src=" + match[0].replace(/\"$/,  "/DASH_96\"") + " />\
-			<audio id=\"" + result.rows[post_index].post_id + "_audio\" controls loop>\
+			<audio id=\"" + post_id + "_audio\" controls loop>\
 			    <source src=" + match[0].replace(/\"$/, "/audio\"") + " type=\"audio/mp3\" />\
 			</audio>\
                     </video>\
 		    <script>\
-			console.log(\"testing, should show in web browser console\");\n\
-			var myvideo = document.getElementById(\"" + result.rows[post_index].post_id + "_video\");\n\
-			var myaudio = document.getElementById(\"" + result.rows[post_index].post_id + "_audio\");\n\
+			//console.log(\"testing, should show in web browser console\");\n\
+			var " + post_id + "_video = document.getElementById(\"" + post_id + "_video\");\n\
+			var " + post_id + "_audio = document.getElementById(\"" + post_id + "_audio\");\n\
 			var change_time_state = true;\n\
 \n\
-			myvideo.onplay = function(){\n\
-			    myaudio.play();\n\
+			" + post_id + "_video.onplay = function(){\n\
+			    " + post_id + "_audio.play();\n\
 			    if(change_time_state){\n\
-				myaudio.currentTime = myvideo.currentTime;\n\
+				" + post_id + "_audio.currentTime = " + post_id + "_video.currentTime;\n\
 				change_time_state = false;\n\
 			    }\n\
 			}\n\
 \n\
-			myvideo.onpause = function(){\n\
-			    myaudio.pause();\n\
+			" + post_id + "_video.onpause = function(){\n\
+			    " + post_id + "_audio.pause();\n\
 			    change_time_state = true;\n\
 			}\n\
 		    </script>";
             }
         }
-        if (mediaTag !== "") {
-            result.rows[post_index].content = result.rows[post_index].content.replace(/<img[^>]+>/, "");
+        if (media_tag !== "") {
+            post_content = post_content.replace(/<img[^>]+>/, "");
+	    media_tag += "<br />";
         }
-        // Concatenate to HTML
+        // generate custom post content
         post_updated = result.rows[post_index].updated.toISOString().replace("T", " ");
         category = result.rows[post_index].category;
-        return_value += "\
+	// add media
+	post_content = post_content.replace("&#32; submitted by &#32; ", media_tag + "&#32; submitted by &#32; ");
+        // add subreddit
+	if (subreddit !== "popular") {
+	    post_content = post_content.replace("<br/>", " to <a href=\"https://www.reddit.com/r/" + category + "/\"> r/" + category + " </a><br/>");
+	}
+	// add date
+        post_content = post_content.replace("<br/>", " on " + post_updated.substring(0, post_updated.lastIndexOf(":")) + "<br/>");
+        // redirect subreddit to topreddit.duckdns.org instead of reddit.com
+	if (subreddit !== "nsfw") {
+	    post_content = post_content.replace("<a href=\"https://www.reddit.com/r/" + category + "/\">", "<a href=\"" + WEBSITE_URL + "/r/" + category + "/\">");
+        }
+	// add top_rank
+	post_content = post_content.replace("[comments]</a></span>", "[comments]</a></span> &#32; <span>[top_rank=" + result.rows[post_index].top_rank + "]</span>");
+	return_value += "\
             <li>\
                 <a href='" + result.rows[post_index].link + "'>\
                     <h2>" + result.rows[post_index].title + "</h2>\
-                </a>" + result.rows[post_index].content
-                    .replace("<br/>", " on " + post_updated.substring(0, post_updated.lastIndexOf(":")) + "<br/>")
-                    .replace('<a href="https://www.reddit.com/r/' + category + '/">', '<a href="' + WEBSITE_URL + '/r/' + category + '/">')
-                    .replace("[comments]</a></span>", "[comments]</a></span> &#32; <span>[top_rank=" + result.rows[post_index].top_rank + "]</span>") + mediaTag +
-                "<br />\
+                </a>" + post_content + "\
             </li>";
     }
     return_value += "\
