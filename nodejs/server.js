@@ -206,13 +206,13 @@ function get_HTML_posts(subreddit, count, result, num_posts) {
             } else if (match[0].includes("v.redd.it")) { // reddit videos
                 post_id = result.rows[post_index].post_id;
 		media_tag = "\
-                    <video id=\"" + post_id + "_video\" autoplay controls muted loop>\
+                    <video id=\"" + post_id + "_video\" autoplay controls muted loop type=\"video/mp4\">\
                         <source src=" + match[0].replace(/\"$/, "/DASH_720\"") + " />\
                         <source src=" + match[0].replace(/\"$/, "/DASH_480\"") + " />\
                         <source src=" + match[0].replace(/\"$/, "/DASH_240\"") + " />\
                         <source src=" + match[0].replace(/\"$/,  "/DASH_96\"") + " />\
 			<audio id=\"" + post_id + "_audio\" controls loop>\
-			    <source src=" + match[0].replace(/\"$/, "/audio\"") + " type=\"audio/mp3\" />\
+			    <source src=" + match[0].replace(/\"$/, "/audio\"") + " type=\"audio/mp4\" />\
 			</audio>\
                     </video>\
 		    <script>\
