@@ -72,10 +72,9 @@ def modify_record(cursor, table_name, post_id, rank, category, title, link, auth
             "VALUES ('" + post_id + "'," + str(rank) + ",'" + time_top_rank_achieved + "','" + category + "','" + title + "','" + link + "','" + author_name + "','" + updated + "','" + content + "');" \
         )
     elif lookup[1] > rank: # if existing_in_table < current_rank_to_maybe_put_in_table
-	cursor.execute("SELECT NOW();")
+        cursor.execute("SELECT NOW();")
         time_top_rank_achieved = str(cursor.fetchone()[0])
         cursor.execute( \
-	cursor.execute( \
             "UPDATE " + table_name + " " \
             "SET top_rank = " + str(rank) + ", time_top_rank_achieved = '" + time_top_rank_achieved + "' " \
             "WHERE post_id = '" + post_id + "';"
