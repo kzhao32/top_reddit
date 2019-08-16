@@ -92,7 +92,7 @@ function get_query_parameters(req, subreddit) {
     let top_rank = req.query.top_rank;
     if (top_rank == null || top_rank < 1) {
         top_rank = DEFAULT_CONFIG.get(
-            subreddit === "popular" ? "top_rank" : "top_rank_subreddit"
+            subreddit === "popular" || subreddit === "nsfw" ? "top_rank" : "top_rank_subreddit"
         );
     }
     let count = req.query.count;
@@ -185,7 +185,7 @@ function get_HTML_posts(subreddit, count, result, num_posts) {
     return_value = "\
         <div>\
             <ol start='" + (parseInt(count) + 1) + "'>";
-    let re = /"https?:\/\/(i\.redd\.it|v\.redd\.it|i\.imgur\.com|gfycat\.com)\/[^"]*"/;
+    let re = /"https?:\/\/(i\.redd\.it|v\.redd\.it|i\.imgur\.com|imgur\.com|gfycat\.com)\/[^"]+"/;
     let match = "";
     let media_tag = "";
     let imageEnds = [".jpg\"", ".jpeg\"", ".gif\"", ".png\""];
@@ -198,11 +198,19 @@ function get_HTML_posts(subreddit, count, result, num_posts) {
             // media tag depends on whether it's an image, gfycat gif, or reddit video
             if (imageEnds.includes(match[0].slice(match[0].lastIndexOf(".")))) { // images
                 media_tag = "<img src=" + match[0] + " />";
-            } else if (match[0].includes("gfycat.com")) { // gfycat gifs
+            } else if (match[0].includes("imgur.com") && match[0].endsWith(".gifv\"")) { // post with imgur gifv cqnyms TODO imgur refused to connect
+	        //media_tag = "<iframe src=" + match[0].replace(".gifv\"", ".mp4\"") + " frameborder='0' allowfullscreen></iframe>"
+	        media_tag = "\
+		    <video autoplay controls muted loop type=\"video/mp4\">\
+			<source src=" + match[0].replace(".gifv\"", ".mp4\"") + " />\
+		    </video>"
+	    } else if (match[0].includes("imgur.com")) { // post with image file cqiy5o
+                media_tag = "<img src=" + match[0].replace(/\"$/, ".jpg\"") + " />";
+	    } else if (match[0].includes("gfycat.com")) { // gfycat gifs
                 if (match[0].indexOf("-") > 0) { // need to omit anything after hyphen for ifr gfycat
                     match[0] = match[0].substr(0, match[0].indexOf("-")) + "\"";
                 }
-                media_tag = "<iframe src=" + match[0].replace("gfycat.com", "gfycat.com/ifr") + " frameborder='0' allowfullscreen></iframe>"
+                media_tag = "<iframe src=" + match[0].replace("/gifs/detail/", "/").replace("gfycat.com", "gfycat.com/ifr") + " frameborder='0' allowfullscreen></iframe>"
             } else if (match[0].includes("v.redd.it")) { // reddit videos
                 post_id = result.rows[post_index].post_id;
 		media_tag = "\
