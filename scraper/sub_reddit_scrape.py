@@ -32,7 +32,7 @@ def get_entries(reddit_rss_url):
             if len(entries) > 0:
                 return entries
         except Exception: # Reddit returns 0 entries if scraping too often to avoid bots.
-            print("warning: failed to fetch page, retrying in 2 seconds; ", end=" ")
+            #print("warning: failed to fetch page, retrying in 2 seconds; ", end=" ")
             time.sleep(2)
     return
 
@@ -58,7 +58,7 @@ def main():
         subreddits = backend.get_subreddits(cursor, "top_posts")
         subreddits_counter = 0
         for subreddit in subreddits:
-            print(str(subreddits_counter) + ": scraping " + subreddit[0] + ".")
+            #print(str(subreddits_counter) + ": scraping " + subreddit[0] + ".")
             subreddits_counter += 1
             rank_counter = 0
             # Call function to get entries using rss url.
@@ -94,10 +94,10 @@ def main():
                 rank_counter = rank_counter + 1
             # Commit updates to database every 25 subreddits.
             if (subreddits_counter % 25 == 0):
-                print("Committing to database now.***************")
+                #print("Committing to database now.***************")
                 connection.commit()
         # Do a final commit to database after all subreddits.
-        print("Committing to database now.***************")
+        #print("Committing to database now.***************")
         connection.commit()
     
     except (Exception, psycopg2.Error) as error :
