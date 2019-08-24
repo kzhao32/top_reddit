@@ -59,19 +59,50 @@ function get_subreddit(req, res, next, subreddit) {
 
         [ table_name, num_posts, top_rank, count, after, after_sql ] = get_query_parameters(req, subreddit);
 
-        client.query("\
-            SELECT * \
-                FROM " + table_name + " \
-                WHERE top_rank <= " + top_rank + " " +
-		    (subreddit === "popular" || subreddit === "nsfw" ?
-                        "" : 
-                        "AND category IN ('" + subreddit.split('+').join("', '") + "') ") + 
-		    after_sql + "\
-                ORDER BY time_top_rank_achieved DESC, top_rank ASC, updated DESC",
-            function(err, result) {
-                get_HTML(done, err, result, res, subreddit, table_name, num_posts, top_rank, count, after, after_sql);
+	for (table_index = 0; table_index < table_name.length; ++table_index) { 
+            let after_sql = "";
+            if (after != null && after != "undefined") {
+                // filter posts to older time_top_rank_achieved, lower top_rank, or older updated
+         	after_sql = "" +
+                    "    AND (time_top_rank_achieved < (\n" + 
+         	    "        SELECT time_top_rank_achieved\n" +
+         	    "        FROM " + table_name[table_index] + " WHERE post_id = '" + after + "')\n" +
+                    "        OR (time_top_rank_achieved = (\n" +
+         	    "            SELECT time_top_rank_achieved \n" +
+         	    "            FROM " + table_name[table_index] + " WHERE post_id = '" + after + "') \n" +
+         	    "                AND top_rank > (\n" +
+         	    "                    SELECT top_rank FROM " + table_name[table_index] + " \n" +
+         	    "                    WHERE post_id = '" + after + "'))\n" +
+         	    "        OR (time_top_rank_achieved = (\n" +
+         	    "            SELECT time_top_rank_achieved \n" +
+         	    "            FROM " + table_name[table_index] + " WHERE post_id = '" + after + "') \n" +
+         	    "                AND top_rank = (\n" +
+         	    "                    SELECT top_rank FROM " + table_name[table_index] + " \n" +
+         	    "                    WHERE post_id = '" + after + "')\n" +
+         	    "                AND updated < (\n" +
+         	    "                    SELECT updated FROM " + table_name[table_index] + " \n" +
+         	    "                    WHERE post_id = '" + after + "'))\n" +
+         	    "    )\n";
             }
-        );
+	    let sql_query = "" +
+                "SELECT *\n" +
+		"FROM " + table_name[table_index] + "\n" +
+                "WHERE top_rank <= " + top_rank + " " +
+	    	    (subreddit === "popular" || subreddit === "nsfw" ? // popular is not an actual subreddit
+			"" : 
+			"AND category IN ('" + subreddit.split('+').join("', '") + "') ") + "\n" + 
+	    	after_sql +
+                "ORDER BY time_top_rank_achieved DESC, top_rank ASC, updated DESC";
+	    client.query(sql_query, 
+                function(err, result) {
+                    if (result.rows.length > 0 || table_index == table_name.length - 1) {
+			// run at least once
+			// okay to run more than once since try catch
+			get_HTML(done, err, result, res, subreddit, table_name, num_posts, top_rank, count, after, after_sql);
+		    }
+                }
+            );
+	}
     });
 }
 
@@ -84,7 +115,7 @@ function check_error(res, err) {
 
 function get_query_parameters(req, subreddit) {
     // Query parameters
-    let table_name = subreddit === "popular" ? "top_posts" : (subreddit === "nsfw" ? "nsfw_subreddits" : "subreddits");
+    let table_name = subreddit === "popular" ? ["top_posts"] : subreddit === "nsfw" ? ["nsfw_subreddits"] : ["subreddits", "nsfw_subreddits"]; //(subreddit === "nsfw" ? "nsfw_subreddits" : "subreddits");
     let num_posts = req.query.num_posts;
     if (num_posts == null || num_posts < 1) {
         num_posts = DEFAULT_CONFIG.get("num_posts");
@@ -100,32 +131,7 @@ function get_query_parameters(req, subreddit) {
         count = DEFAULT_CONFIG.get("count");
     }
     let after = req.query.after;
-    let after_sql = "";
-    if (after != null && after != "undefined") {
-        // filter posts to older time_top_rank_achieved, lower top_rank, or older updated
-	after_sql = "\
-            AND (time_top_rank_achieved < (\
-		SELECT time_top_rank_achieved \
-		    FROM " + table_name + " WHERE post_id = '" + after + "') \
-                OR (time_top_rank_achieved = (\
-		    SELECT time_top_rank_achieved \
-			FROM " + table_name + " WHERE post_id = '" + after + "') \
-			AND top_rank > (\
-			    SELECT top_rank FROM " + table_name + " \
-			    WHERE post_id = '" + after + "'))\
-		OR (time_top_rank_achieved = (\
-		    SELECT time_top_rank_achieved \
-			FROM " + table_name + " WHERE post_id = '" + after + "') \
-			AND top_rank = (\
-			    SELECT top_rank FROM " + table_name + " \
-			    WHERE post_id = '" + after + "')\
-			AND updated < (\
-			    SELECT updated FROM " + table_name + " \
-			    WHERE post_id = '" + after + "')\
-		)\
-	    ) ";
-    }
-    return [ table_name, num_posts, top_rank, count, after, after_sql ];
+    return [ table_name, num_posts, top_rank, count, after ];
 }
 
 function get_HTML(done, err, result, res, subreddit, table_name, num_posts, top_rank, count, after, after_sql) {
@@ -139,7 +145,11 @@ function get_HTML(done, err, result, res, subreddit, table_name, num_posts, top_
     [ HTML_posts, post_index ] = get_HTML_posts(subreddit, count, result, num_posts);
     return_value += HTML_posts;
     return_value += get_HTML_next_page_link(post_index, result, num_posts, subreddit, top_rank, count);
-    res.status(200).send(return_value);
+    try {
+	res.status(200).send(return_value);
+    } catch (err) {
+
+    }
 }
 
 function get_HTML_header() {
@@ -197,7 +207,7 @@ function get_HTML_posts(subreddit, count, result, num_posts) {
         if (match != null && match.length > 0) {
             // media tag depends on whether it's an image, gfycat gif, or reddit video
             if (imageEnds.includes(match[0].slice(match[0].lastIndexOf(".")))) { // images
-                media_tag = "<img src=" + match[0] + " />";
+                media_tag = "<a href=" + match[0] + "><img src=" + match[0] + " /></a>";
             } else if (match[0].includes("imgur.com") && match[0].endsWith(".gifv\"")) { // post with imgur gifv cqnyms TODO imgur refused to connect
 	        //media_tag = "<iframe src=" + match[0].replace(".gifv\"", ".mp4\"") + " frameborder='0' allowfullscreen></iframe>"
 	        media_tag = "\
@@ -260,9 +270,7 @@ function get_HTML_posts(subreddit, count, result, num_posts) {
 	// add date
         post_content = post_content.replace("<br/>", " on " + post_updated.substring(0, post_updated.lastIndexOf(":")) + "<br/>");
         // redirect subreddit to topreddit.duckdns.org instead of reddit.com
-	if (subreddit !== "nsfw") {
-	    post_content = post_content.replace("<a href=\"https://www.reddit.com/r/" + category + "/\">", "<a href=\"" + WEBSITE_URL + "/r/" + category + "/\">");
-        }
+	post_content = post_content.replace("<a href=\"https://www.reddit.com/r/" + category + "/\">", "<a href=\"" + WEBSITE_URL + "/r/" + category + "/\">");
 	// add top_rank
 	post_content = post_content.replace("[comments]</a></span>", "[comments]</a></span> &#32; <span>[top_rank=" + result.rows[post_index].top_rank + "]</span>");
 	return_value += "\
