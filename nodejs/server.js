@@ -222,7 +222,7 @@ function get_HTML_posts(subreddit, count, result, num_posts) {
                 media_tag = "<iframe src=" + match[0].replace("/gifs/detail/", "/").replace("thumbs.gfycat.com", "gfycat.com").replace("gfycat.com", "gfycat.com/ifr") + " frameborder='0' allowfullscreen></iframe>"
             } else if (match[0].includes("youtu.be") || match[0].includes("youtube.com")) {
                 media_tag = "<iframe src=" + match[0].replace("youtu.be", "youtube.com").replace("youtube.com", "youtube.com/embed") + " frameborder='0' allowfullscreen></iframe>"
-            }else if (match[0].includes("v.redd.it")) { // reddit videos
+            } else if (match[0].includes("v.redd.it")) { // reddit videos
                 post_id = result.rows[post_index].post_id;
                 media_tag = "\
                     <video id=\"" + post_id + "_video\" autoplay controls muted loop type=\"video/mp4\">\
@@ -236,7 +236,7 @@ function get_HTML_posts(subreddit, count, result, num_posts) {
                             <source src=" + match[0].replace(/\"$/, "/audio\"") + " type=\"audio/mp4\" />\
                         </audio>\
                     </video>\
-                 <script>\
+                <script>\
                 //console.log(\"testing, should show in web browser console\");\n\
                 var " + post_id + "_video = document.getElementById(\"" + post_id + "_video\");\n\
                 var " + post_id + "_audio = document.getElementById(\"" + post_id + "_audio\");\n\
@@ -254,7 +254,7 @@ function get_HTML_posts(subreddit, count, result, num_posts) {
                     " + post_id + "_audio.pause();\n\
                     change_time_state = true;\n\
                 }\n\
-                 </script>";
+                </script>";
             }
         }
         if (media_tag !== "") {
@@ -265,7 +265,7 @@ function get_HTML_posts(subreddit, count, result, num_posts) {
         post_updated = result.rows[post_index].updated.toISOString().replace("T", " ");
         category = result.rows[post_index].category;
         // add media
-         post_content = post_content.replace("&#32; submitted by &#32; ", media_tag + "&#32; submitted by &#32; ");
+        post_content = post_content.replace("&#32; submitted by &#32; ", media_tag + "&#32; submitted by &#32; ");
         // add subreddit
         if (subreddit !== "popular") {
             post_content = post_content.replace("<br/>", " to <a href=\"https://www.reddit.com/r/" + category + "/\"> r/" + category + " </a><br/>");
