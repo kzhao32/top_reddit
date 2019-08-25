@@ -59,50 +59,50 @@ function get_subreddit(req, res, next, subreddit) {
 
         [ table_name, num_posts, top_rank, count, after, after_sql ] = get_query_parameters(req, subreddit);
 
-	for (table_index = 0; table_index < table_name.length; ++table_index) { 
+        let sql_query = "(\n"
+        for (table_index = 0; table_index < table_name.length; ++table_index) {
             let after_sql = "";
             if (after != null && after != "undefined") {
                 // filter posts to older time_top_rank_achieved, lower top_rank, or older updated
-         	after_sql = "" +
+                after_sql = "" +
                     "    AND (time_top_rank_achieved < (\n" + 
-         	    "        SELECT time_top_rank_achieved\n" +
-         	    "        FROM " + table_name[table_index] + " WHERE post_id = '" + after + "')\n" +
+                    "        SELECT time_top_rank_achieved\n" +
+                    "        FROM " + table_name[table_index] + " WHERE post_id = '" + after + "')\n" +
                     "        OR (time_top_rank_achieved = (\n" +
-         	    "            SELECT time_top_rank_achieved \n" +
-         	    "            FROM " + table_name[table_index] + " WHERE post_id = '" + after + "') \n" +
-         	    "                AND top_rank > (\n" +
-         	    "                    SELECT top_rank FROM " + table_name[table_index] + " \n" +
-         	    "                    WHERE post_id = '" + after + "'))\n" +
-         	    "        OR (time_top_rank_achieved = (\n" +
-         	    "            SELECT time_top_rank_achieved \n" +
-         	    "            FROM " + table_name[table_index] + " WHERE post_id = '" + after + "') \n" +
-         	    "                AND top_rank = (\n" +
-         	    "                    SELECT top_rank FROM " + table_name[table_index] + " \n" +
-         	    "                    WHERE post_id = '" + after + "')\n" +
-         	    "                AND updated < (\n" +
-         	    "                    SELECT updated FROM " + table_name[table_index] + " \n" +
-         	    "                    WHERE post_id = '" + after + "'))\n" +
-         	    "    )\n";
+                    "            SELECT time_top_rank_achieved \n" +
+                    "            FROM " + table_name[table_index] + " WHERE post_id = '" + after + "') \n" +
+                    "                AND top_rank > (\n" +
+                    "                    SELECT top_rank FROM " + table_name[table_index] + " \n" +
+                    "                    WHERE post_id = '" + after + "'))\n" +
+                    "        OR (time_top_rank_achieved = (\n" +
+                    "            SELECT time_top_rank_achieved \n" +
+                    "            FROM " + table_name[table_index] + " WHERE post_id = '" + after + "') \n" +
+                    "                AND top_rank = (\n" +
+                    "                    SELECT top_rank FROM " + table_name[table_index] + " \n" +
+                    "                    WHERE post_id = '" + after + "')\n" +
+                    "                AND updated < (\n" +
+                    "                    SELECT updated FROM " + table_name[table_index] + " \n" +
+                    "                    WHERE post_id = '" + after + "'))\n" +
+                    "    )\n";
             }
-	    let sql_query = "" +
+            sql_query = sql_query + (table_index == 0 ? "" : "UNION\n") +
+                "(\n" +
                 "SELECT *\n" +
-		"FROM " + table_name[table_index] + "\n" +
+                "FROM " + table_name[table_index] + "\n" +
                 "WHERE top_rank <= " + top_rank + " " +
-	    	    (subreddit === "popular" || subreddit === "nsfw" ? // popular is not an actual subreddit
-			"" : 
-			"AND category IN ('" + subreddit.split('+').join("', '") + "') ") + "\n" + 
-	    	after_sql +
-                "ORDER BY time_top_rank_achieved DESC, top_rank ASC, updated DESC";
-	    client.query(sql_query, 
-                function(err, result) {
-                    if (result.rows.length > 0 || table_index == table_name.length - 1) {
-			// run at least once
-			// okay to run more than once since try catch
-			get_HTML(done, err, result, res, subreddit, table_name, num_posts, top_rank, count, after, after_sql);
-		    }
-                }
-            );
-	}
+                    (subreddit === "popular" || subreddit === "nsfw" ? // popular is not an actual subreddit
+                        "" : 
+                        "AND category IN ('" + subreddit.split('+').join("', '") + "') ") + "\n" + 
+                after_sql +
+                ")\n";
+        }
+        sql_query += ")\n" +
+            "ORDER BY time_top_rank_achieved DESC, top_rank ASC, updated DESC";
+        client.query(sql_query, 
+            function(err, result) {
+                get_HTML(done, err, result, res, subreddit, table_name, num_posts, top_rank, count, after, after_sql);
+            }
+        );
     });
 }
 
@@ -115,7 +115,7 @@ function check_error(res, err) {
 
 function get_query_parameters(req, subreddit) {
     // Query parameters
-    let table_name = subreddit === "popular" ? ["top_posts"] : subreddit === "nsfw" ? ["nsfw_subreddits"] : ["subreddits", "nsfw_subreddits"]; //(subreddit === "nsfw" ? "nsfw_subreddits" : "subreddits");
+    let table_name = subreddit === "popular" ? ["top_posts"] : subreddit === "nsfw" ? ["nsfw_subreddits"] : ["subreddits", "nsfw_subreddits", "top_posts"];
     let num_posts = req.query.num_posts;
     if (num_posts == null || num_posts < 1) {
         num_posts = DEFAULT_CONFIG.get("num_posts");
@@ -146,9 +146,8 @@ function get_HTML(done, err, result, res, subreddit, table_name, num_posts, top_
     return_value += HTML_posts;
     return_value += get_HTML_next_page_link(post_index, result, num_posts, subreddit, top_rank, count);
     try {
-	res.status(200).send(return_value);
+        res.status(200).send(return_value);
     } catch (err) {
-
     }
 }
 
@@ -195,12 +194,12 @@ function get_HTML_posts(subreddit, count, result, num_posts) {
     return_value = "\
         <div>\
             <ol start='" + (parseInt(count) + 1) + "'>";
-    let re = /"https?:\/\/(i\.redd\.it|v\.redd\.it|i\.imgur\.com|imgur\.com|gfycat\.com)\/[^"]+"/;
+    let re = /"https?:\/\/(i\.redd\.it|v\.redd\.it|i\.imgur\.com|imgur\.com|gfycat\.com|thumbs\.gfycat\.com|pbs\.twimg\.com|youtu\.be|youtube\.com)\/[^"]+"/;
     let match = "";
     let media_tag = "";
     let imageEnds = [".jpg\"", ".jpeg\"", ".gif\"", ".png\""];
     let post_index = 0; // need post_index after for loop for 'next_page' link
-    for ( ; post_index < Math.min(result.rows.length, num_posts); ++post_index) {
+    for ( ; result && post_index < Math.min(result.rows.length, num_posts); ++post_index) {
         media_tag = "";
         post_content = result.rows[post_index].content;
         match = post_content.match(re);
@@ -209,76 +208,80 @@ function get_HTML_posts(subreddit, count, result, num_posts) {
             if (imageEnds.includes(match[0].slice(match[0].lastIndexOf(".")))) { // images
                 media_tag = "<a href=" + match[0] + "><img src=" + match[0] + " /></a>";
             } else if (match[0].includes("imgur.com") && match[0].endsWith(".gifv\"")) { // post with imgur gifv cqnyms TODO imgur refused to connect
-	        //media_tag = "<iframe src=" + match[0].replace(".gifv\"", ".mp4\"") + " frameborder='0' allowfullscreen></iframe>"
-	        media_tag = "\
-		    <video autoplay controls muted loop type=\"video/mp4\">\
-			<source src=" + match[0].replace(".gifv\"", ".mp4\"") + " />\
-		    </video>"
-	    } else if (match[0].includes("imgur.com")) { // post with image file cqiy5o
+                //media_tag = "<iframe src=" + match[0].replace(".gifv\"", ".mp4\"") + " frameborder='0' allowfullscreen></iframe>"
+                media_tag = "\
+                <video autoplay controls muted loop type=\"video/mp4\">\
+                <source src=" + match[0].replace(".gifv\"", ".mp4\"") + " />\
+                </video>"
+            } else if (match[0].includes("imgur.com")) { // post with image file cqiy5o
                 media_tag = "<img src=" + match[0].replace(/\"$/, ".jpg\"") + " />";
-	    } else if (match[0].includes("gfycat.com")) { // gfycat gifs
+            } else if (match[0].includes("gfycat.com")) { // gfycat gifs
                 if (match[0].indexOf("-") > 0) { // need to omit anything after hyphen for ifr gfycat
                     match[0] = match[0].substr(0, match[0].indexOf("-")) + "\"";
                 }
-                media_tag = "<iframe src=" + match[0].replace("/gifs/detail/", "/").replace("gfycat.com", "gfycat.com/ifr") + " frameborder='0' allowfullscreen></iframe>"
-            } else if (match[0].includes("v.redd.it")) { // reddit videos
+                media_tag = "<iframe src=" + match[0].replace("/gifs/detail/", "/").replace("thumbs.gfycat.com", "gfycat.com").replace("gfycat.com", "gfycat.com/ifr") + " frameborder='0' allowfullscreen></iframe>"
+            } else if (match[0].includes("youtu.be") || match[0].includes("youtube.com")) {
+                media_tag = "<iframe src=" + match[0].replace("youtu.be", "youtube.com").replace("youtube.com", "youtube.com/embed") + " frameborder='0' allowfullscreen></iframe>"
+            }else if (match[0].includes("v.redd.it")) { // reddit videos
                 post_id = result.rows[post_index].post_id;
-		media_tag = "\
+                media_tag = "\
                     <video id=\"" + post_id + "_video\" autoplay controls muted loop type=\"video/mp4\">\
                         <source src=" + match[0].replace(/\"$/, "/DASH_720\"") + " />\
                         <source src=" + match[0].replace(/\"$/, "/DASH_480\"") + " />\
+                        <source src=" + match[0].replace(/\"$/, "/DASH_1080\"") + " />\
+                        <source src=" + match[0].replace(/\"$/, "/DASH_360\"") + " />\
                         <source src=" + match[0].replace(/\"$/, "/DASH_240\"") + " />\
                         <source src=" + match[0].replace(/\"$/,  "/DASH_96\"") + " />\
-			<audio id=\"" + post_id + "_audio\" controls loop>\
-			    <source src=" + match[0].replace(/\"$/, "/audio\"") + " type=\"audio/mp4\" />\
-			</audio>\
+                        <audio id=\"" + post_id + "_audio\" controls loop>\
+                            <source src=" + match[0].replace(/\"$/, "/audio\"") + " type=\"audio/mp4\" />\
+                        </audio>\
                     </video>\
-		    <script>\
-			//console.log(\"testing, should show in web browser console\");\n\
-			var " + post_id + "_video = document.getElementById(\"" + post_id + "_video\");\n\
-			var " + post_id + "_audio = document.getElementById(\"" + post_id + "_audio\");\n\
-			var change_time_state = true;\n\
-\n\
-			" + post_id + "_video.onplay = function(){\n\
-			    " + post_id + "_audio.play();\n\
-			    if(change_time_state){\n\
-				" + post_id + "_audio.currentTime = " + post_id + "_video.currentTime;\n\
-				change_time_state = false;\n\
-			    }\n\
-			}\n\
-\n\
-			" + post_id + "_video.onpause = function(){\n\
-			    " + post_id + "_audio.pause();\n\
-			    change_time_state = true;\n\
-			}\n\
-		    </script>";
+                 <script>\
+                //console.log(\"testing, should show in web browser console\");\n\
+                var " + post_id + "_video = document.getElementById(\"" + post_id + "_video\");\n\
+                var " + post_id + "_audio = document.getElementById(\"" + post_id + "_audio\");\n\
+                var change_time_state = true;\n\
+                \n\
+                " + post_id + "_video.onplay = function() {\n\
+                    " + post_id + "_audio.play();\n\
+                    if(change_time_state) {\n\
+                        " + post_id + "_audio.currentTime = " + post_id + "_video.currentTime;\n\
+                        change_time_state = false;\n\
+                    }\n\
+                }\n\
+                \n\
+                " + post_id + "_video.onpause = function() {\n\
+                    " + post_id + "_audio.pause();\n\
+                    change_time_state = true;\n\
+                }\n\
+                 </script>";
             }
         }
         if (media_tag !== "") {
             post_content = post_content.replace(/<img[^>]+>/, "");
-	    media_tag += "<br />";
+            media_tag += "<br />";
         }
         // generate custom post content
         post_updated = result.rows[post_index].updated.toISOString().replace("T", " ");
         category = result.rows[post_index].category;
-	// add media
-	post_content = post_content.replace("&#32; submitted by &#32; ", media_tag + "&#32; submitted by &#32; ");
+        // add media
+         post_content = post_content.replace("&#32; submitted by &#32; ", media_tag + "&#32; submitted by &#32; ");
         // add subreddit
-	if (subreddit !== "popular") {
-	    post_content = post_content.replace("<br/>", " to <a href=\"https://www.reddit.com/r/" + category + "/\"> r/" + category + " </a><br/>");
-	}
-	// add date
+        if (subreddit !== "popular") {
+            post_content = post_content.replace("<br/>", " to <a href=\"https://www.reddit.com/r/" + category + "/\"> r/" + category + " </a><br/>");
+        }
+        // add date
         post_content = post_content.replace("<br/>", " on " + post_updated.substring(0, post_updated.lastIndexOf(":")) + "<br/>");
         // redirect subreddit to topreddit.duckdns.org instead of reddit.com
-	post_content = post_content.replace("<a href=\"https://www.reddit.com/r/" + category + "/\">", "<a href=\"" + WEBSITE_URL + "/r/" + category + "/\">");
-	// add top_rank
-	post_content = post_content.replace("[comments]</a></span>", "[comments]</a></span> &#32; <span>[top_rank=" + result.rows[post_index].top_rank + "]</span>");
-	return_value += "\
-            <li>\
-                <a href='" + result.rows[post_index].link + "'>\
-                    <h2>" + result.rows[post_index].title + "</h2>\
-                </a>" + post_content + "\
-            </li>";
+        post_content = post_content.replace("<a href=\"https://www.reddit.com/r/" + category + "/\">", "<a href=\"" + WEBSITE_URL + "/r/" + category + "/\">");
+        // add top_rank
+        post_content = post_content.replace("[comments]</a></span>", "[comments]</a></span> &#32; <span>[top_rank=" + result.rows[post_index].top_rank + "]</span>");
+        return_value += "\
+                 <li>\
+                     <a href='" + result.rows[post_index].link + "'>\
+                         <h2>" + result.rows[post_index].title + "</h2>\
+                     </a>" + post_content + "\
+                 </li>";
     }
     return_value += "\
             </ol>\
