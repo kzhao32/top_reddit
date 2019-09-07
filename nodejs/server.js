@@ -96,7 +96,7 @@ function get_subreddit(req, res, next, subreddit) {
                 after_sql +
                 ")\n";
         }
-        sql_query += ")\n" + "ORDER BY "
+        sql_query += ")\n" + "ORDER BY " +
             (["rand", "rand_nsfw"].includes(subreddit) ?
               "RANDOM()" :
               "time_top_rank_achieved DESC, top_rank ASC, updated DESC"
