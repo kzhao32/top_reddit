@@ -45,7 +45,7 @@ app.get('/r/:subreddit', function(req, res, next) {
 
 app.get('/', function(req, res, next) {
     get_subreddit(req, res, next, "popular")
-    
+
 });
 
 // Starts the HTTP server listening for connections.
@@ -65,7 +65,7 @@ function get_subreddit(req, res, next, subreddit) {
             if (after != null && after != "undefined") {
                 // filter posts to older time_top_rank_achieved, lower top_rank, or older updated
                 after_sql = "" +
-                    "    AND (time_top_rank_achieved < (\n" + 
+                    "    AND (time_top_rank_achieved < (\n" +
                     "        SELECT time_top_rank_achieved\n" +
                     "        FROM " + table_name[table_index] + " WHERE post_id = '" + after + "')\n" +
                     "        OR (time_top_rank_achieved = (\n" +
@@ -90,15 +90,18 @@ function get_subreddit(req, res, next, subreddit) {
                 "SELECT *\n" +
                 "FROM " + table_name[table_index] + "\n" +
                 "WHERE top_rank <= " + top_rank + " " +
-                    (subreddit === "popular" || subreddit === "nsfw" ? // popular is not an actual subreddit
-                        "" : 
-                        "AND category IN ('" + subreddit.split('+').join("', '") + "') ") + "\n" + 
+                    (["popular", "rand", "nsfw", "rand_nsfw"].includes(subreddit) ? // popular is not an actual subreddit
+                        "" :
+                        "AND category IN ('" + subreddit.split('+').join("', '") + "') ") + "\n" +
                 after_sql +
                 ")\n";
         }
-        sql_query += ")\n" +
-            "ORDER BY time_top_rank_achieved DESC, top_rank ASC, updated DESC";
-        client.query(sql_query, 
+        sql_query += ")\n" + "ORDER BY "
+            (["rand", "rand_nsfw"].includes(subreddit) ?
+              "RANDOM()" :
+              "time_top_rank_achieved DESC, top_rank ASC, updated DESC"
+            );
+        client.query(sql_query,
             function(err, result) {
                 get_HTML(done, err, result, res, subreddit, table_name, num_posts, top_rank, count, after, after_sql);
             }
@@ -115,7 +118,7 @@ function check_error(res, err) {
 
 function get_query_parameters(req, subreddit) {
     // Query parameters
-    let table_name = subreddit === "popular" ? ["top_posts"] : subreddit === "nsfw" ? ["nsfw_subreddits"] : ["subreddits", "nsfw_subreddits", "top_posts"];
+    let table_name = ["popular", "rand"].includes(subreddit) ? ["top_posts"] : ["nsfw", "rand_nsfw"].includes(subreddit) ? ["nsfw_subreddits"] : ["subreddits", "nsfw_subreddits", "top_posts"];
     let num_posts = req.query.num_posts;
     if (num_posts == null || num_posts < 1) {
         num_posts = DEFAULT_CONFIG.get("num_posts");
@@ -123,7 +126,7 @@ function get_query_parameters(req, subreddit) {
     let top_rank = req.query.top_rank;
     if (top_rank == null || top_rank < 1) {
         top_rank = DEFAULT_CONFIG.get(
-            subreddit === "popular" || subreddit === "nsfw" ? "top_rank" : "top_rank_subreddit"
+            ["popular", "rand", "nsfw", "rand_nsfw"].includes(subreddit) ? "top_rank" : "top_rank_subreddit"
         );
     }
     let count = req.query.count;
@@ -317,4 +320,3 @@ function get_HTML_next_page_link(post_index, result, num_posts, subreddit, top_r
 app.use(function(req, res) {
     res.status(400).send("404. Page not found!"); // 400 = bad request
 });
-
