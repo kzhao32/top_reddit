@@ -118,7 +118,7 @@ function check_error(res, err) {
 
 function get_query_parameters(req, subreddit) {
     // Query parameters
-    let table_name = ["popular", "rand"].includes(subreddit) ? ["top_posts"] : ["nsfw", "rand_nsfw"].includes(subreddit) ? ["nsfw_subreddits"] : ["subreddits", "nsfw_subreddits", "top_posts"];
+    let table_name = ["popular", "rand"].includes(subreddit) ? ["top_posts"] : ["nsfw", "rand_nsfw"].includes(subreddit) ? ["nsfw_subreddits"] : ["subreddits", "nsfw_subreddits"];
     let num_posts = req.query.num_posts;
     if (num_posts == null || num_posts < 1) {
         num_posts = DEFAULT_CONFIG.get("num_posts");
