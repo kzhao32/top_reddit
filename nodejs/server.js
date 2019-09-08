@@ -31,7 +31,10 @@ app.get('/r/:subreddit', function(req, res, next) {
         get_subreddit(req, res, next, subreddit);
     }
     else {
-        if (subreddit.split('+').includes("popular")) {
+	if (subreddit === "nsfw_rand") {
+	    res.redirect("/r/rand_nsfw");
+	}
+        else if (subreddit.split('+').includes("popular")) {
             subreddit = subreddit.split('+');
             subreddit.splice(subreddit.indexOf("popular"), 1);
             subreddit = subreddit.join('+');
@@ -45,7 +48,6 @@ app.get('/r/:subreddit', function(req, res, next) {
 
 app.get('/', function(req, res, next) {
     get_subreddit(req, res, next, "popular")
-
 });
 
 // Starts the HTTP server listening for connections.
@@ -304,10 +306,15 @@ function get_HTML_next_page_link(post_index, result, num_posts, subreddit, top_r
             </div>";
         }
         else {
-            return_value += "\
+            return_value += ["rand", "rand_nsfw"].includes(subreddit) ?
+		("\
+                <div>\
+                    <a class='next_page' href='" + WEBSITE_URL + "/r/" + subreddit + "/" + "?num_posts=" + num_posts + "&top_rank=" + top_rank + "&count=" + (parseInt(count) + post_index) + "'>Next Page</a>\
+                </div>") :
+		("\
                 <div>\
                     <a class='next_page' href='" + WEBSITE_URL + "/r/" + subreddit + "/" + "?num_posts=" + num_posts + "&top_rank=" + top_rank + "&count=" + (parseInt(count) + post_index) + "&after=" + result.rows[post_index-1].post_id + "'>Next Page</a>\
-                </div>";
+                </div>");
         }
     }
     else {
