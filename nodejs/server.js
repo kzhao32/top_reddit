@@ -31,10 +31,7 @@ app.get('/r/:subreddit', function(req, res, next) {
         get_subreddit(req, res, next, subreddit);
     }
     else {
-	if (subreddit === "nsfw_rand") {
-	    res.redirect("/r/rand_nsfw");
-	}
-        else if (subreddit.split('+').includes("popular")) {
+        if (subreddit.split('+').includes("popular")) {
             subreddit = subreddit.split('+');
             subreddit.splice(subreddit.indexOf("popular"), 1);
             subreddit = subreddit.join('+');
@@ -59,7 +56,7 @@ function get_subreddit(req, res, next, subreddit) {
     pg.connect(CONNECTION_STRING, function(err, client, done) {
         check_error(res, err);
 
-        [ table_name, num_posts, top_rank, count, after, after_sql ] = get_query_parameters(req, subreddit);
+        [ table_name, num_posts, top_rank, count, after, is_rand ] = get_query_parameters(req, subreddit);
 
         let sql_query = "(\n"
         for (table_index = 0; table_index < table_name.length; ++table_index) {
@@ -92,20 +89,20 @@ function get_subreddit(req, res, next, subreddit) {
                 "SELECT *\n" +
                 "FROM " + table_name[table_index] + "\n" +
                 "WHERE top_rank <= " + top_rank + " " +
-                    (["popular", "rand", "nsfw", "rand_nsfw"].includes(subreddit) ? // popular is not an actual subreddit
+                    (["popular", "nsfw"].includes(subreddit) ? // popular is not an actual subreddit
                         "" :
                         "AND category IN ('" + subreddit.split('+').join("', '") + "') ") + "\n" +
                 after_sql +
                 ")\n";
         }
         sql_query += ")\n" + "ORDER BY " +
-            (["rand", "rand_nsfw"].includes(subreddit) ?
+            (is_rand ?
               "RANDOM()" :
               "time_top_rank_achieved DESC, top_rank ASC, updated DESC"
             );
         client.query(sql_query,
             function(err, result) {
-                get_HTML(done, err, result, res, subreddit, table_name, num_posts, top_rank, count, after, after_sql);
+                get_HTML(done, err, result, res, subreddit, table_name, num_posts, top_rank, count, after, is_rand);
             }
         );
     });
@@ -120,7 +117,7 @@ function check_error(res, err) {
 
 function get_query_parameters(req, subreddit) {
     // Query parameters
-    let table_name = ["popular", "rand"].includes(subreddit) ? ["top_posts"] : ["nsfw", "rand_nsfw"].includes(subreddit) ? ["nsfw_subreddits"] : ["subreddits", "nsfw_subreddits"];
+    let table_name = subreddit === "popular" ? ["top_posts"] : subreddit === "nsfw" ? ["nsfw_subreddits"] : ["subreddits", "nsfw_subreddits"];
     let num_posts = req.query.num_posts;
     if (num_posts == null || num_posts < 1) {
         num_posts = DEFAULT_CONFIG.get("num_posts");
@@ -128,7 +125,7 @@ function get_query_parameters(req, subreddit) {
     let top_rank = req.query.top_rank;
     if (top_rank == null || top_rank < 1) {
         top_rank = DEFAULT_CONFIG.get(
-            ["popular", "rand", "nsfw", "rand_nsfw"].includes(subreddit) ? "top_rank" : "top_rank_subreddit"
+            ["popular", "nsfw"].includes(subreddit) ? "top_rank" : "top_rank_subreddit"
         );
     }
     let count = req.query.count;
@@ -136,20 +133,27 @@ function get_query_parameters(req, subreddit) {
         count = DEFAULT_CONFIG.get("count");
     }
     let after = req.query.after;
-    return [ table_name, num_posts, top_rank, count, after ];
+    /*let rand = req.query.rand;
+    console.log("rand = '" + rand + "'");
+    if (rand === "") {
+	console.log("rand is string");
+    }
+    console.log(typeof rand);*/
+    let is_rand = req.query.rand === "true" || req.query.rand === "" || req.query.is_rand === "true" || req.query.is_rand === "";
+    return [ table_name, num_posts, top_rank, count, after, is_rand ];
 }
 
-function get_HTML(done, err, result, res, subreddit, table_name, num_posts, top_rank, count, after, after_sql) {
+function get_HTML(done, err, result, res, subreddit, table_name, num_posts, top_rank, count, after, is_rand) {
     done(); // closing the connection;
     check_error(err);
 
     // Initialize HTML
     let return_value = "";
     return_value += get_HTML_header();
-    return_value += get_HTML_dropdown_boxes(subreddit, num_posts, top_rank, count, after);
+    return_value += get_HTML_dropdown_boxes(subreddit, num_posts, top_rank, count, after, is_rand);
     [ HTML_posts, post_index ] = get_HTML_posts(subreddit, count, result, num_posts);
     return_value += HTML_posts;
-    return_value += get_HTML_next_page_link(post_index, result, num_posts, subreddit, top_rank, count);
+    return_value += get_HTML_next_page_link(post_index, result, num_posts, subreddit, top_rank, count, is_rand);
     try {
         res.status(200).send(return_value);
     } catch (err) {
@@ -165,28 +169,37 @@ function get_HTML_header() {
     ";
 }
 
-function get_HTML_dropdown_boxes(subreddit, num_posts, top_rank, count, after) {
+function get_HTML_dropdown_boxes(subreddit, num_posts, top_rank, count, after, is_rand) {
+    let href_tail = (is_rand ? "&rand=true" : "&after=" + after);
     return "\
         <div>\
+	    <div class='dropdown'>\
+		<a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + num_posts + "&top_rank=" + top_rank + "&count=" + count + (is_rand ? "" : "&rand=true") + "'>\
+		    <button class='button randbutton'>\
+			" + (is_rand ? "disable" : "enable") + "_random\
+		    </button>\
+		</a>\
+	    </div>\
+            <div class='dropdown'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>\
             <div class='dropdown'>\
-                <button class='dropbtn'>num_posts</button>\
+                <button class='button'>num_posts</button>\
                 <div class='dropdown-content'>\
-                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" +   1 + "&top_rank=" + top_rank + "&count=" + count + "&after=" + after + "'>  1</a>\
-                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" +  10 + "&top_rank=" + top_rank + "&count=" + count + "&after=" + after + "'> 10</a>\
-                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" +  25 + "&top_rank=" + top_rank + "&count=" + count + "&after=" + after + "'> 25</a>\
-                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + 100 + "&top_rank=" + top_rank + "&count=" + count + "&after=" + after + "'>100</a>\
-                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + 500 + "&top_rank=" + top_rank + "&count=" + count + "&after=" + after + "'>500</a>\
+                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" +   1 + "&top_rank=" + top_rank + "&count=" + count + href_tail + "'>  1</a>\
+                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" +  10 + "&top_rank=" + top_rank + "&count=" + count + href_tail + "'> 10</a>\
+                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" +  25 + "&top_rank=" + top_rank + "&count=" + count + href_tail + "'> 25</a>\
+                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + 100 + "&top_rank=" + top_rank + "&count=" + count + href_tail + "'>100</a>\
+                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + 500 + "&top_rank=" + top_rank + "&count=" + count + href_tail + "'>500</a>\
                 </div>\
             </div>\
             <div class='dropdown'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>\
             <div class='dropdown'>\
-                <button class='dropbtn'>&nbsp;&nbsp;top_rank&nbsp;&nbsp;</button>\
+                <button class='button'>&nbsp;&nbsp;top_rank&nbsp;&nbsp;</button>\
                 <div class='dropdown-content'>\
-                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + num_posts + "&top_rank=" +   1 + "&count=" + count + "&after=" + after + "'>  1</a>\
-                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + num_posts + "&top_rank=" +   5 + "&count=" + count + "&after=" + after + "'>  5</a>\
-                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + num_posts + "&top_rank=" +  10 + "&count=" + count + "&after=" + after + "'> 10</a>\
-                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + num_posts + "&top_rank=" +  25 + "&count=" + count + "&after=" + after + "'> 25</a>\
-                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + num_posts + "&top_rank=" + 100 + "&count=" + count + "&after=" + after + "'>100</a>\
+                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + num_posts + "&top_rank=" +   1 + "&count=" + count + href_tail + "'>  1</a>\
+                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + num_posts + "&top_rank=" +   5 + "&count=" + count + href_tail + "'>  5</a>\
+                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + num_posts + "&top_rank=" +  10 + "&count=" + count + href_tail + "'> 10</a>\
+                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + num_posts + "&top_rank=" +  25 + "&count=" + count + href_tail + "'> 25</a>\
+                    <a href='" + WEBSITE_URL + "/r/" + subreddit + "/?num_posts=" + num_posts + "&top_rank=" + 100 + "&count=" + count + href_tail + "'>100</a>\
                 </div>\
             </div>\
             <br />\
@@ -294,7 +307,7 @@ function get_HTML_posts(subreddit, count, result, num_posts) {
     return [ return_value, post_index ];
 }
 
-function get_HTML_next_page_link(post_index, result, num_posts, subreddit, top_rank, count) {
+function get_HTML_next_page_link(post_index, result, num_posts, subreddit, top_rank, count, is_rand) {
     return_value = "";
     // return_value += "<input type=\"text\"><button type=\"button\">Start Scraping Subreddit</button>" + '<form action="/team_name_url/" method="post"> <label for="team_name">Enter name: </label>        <input id="team_name" type="text" name="name_field" value="Default name for team.">            <input type="submit" value="OK">        </form>' + " next count = " + (parseInt(count) + post_index) + " and next after = " + result.rows[post_index-1].post_id;
     // Next page anchor tag
@@ -306,15 +319,10 @@ function get_HTML_next_page_link(post_index, result, num_posts, subreddit, top_r
             </div>";
         }
         else {
-            return_value += ["rand", "rand_nsfw"].includes(subreddit) ?
-		("\
+            return_value += "\
                 <div>\
-                    <a class='next_page' href='" + WEBSITE_URL + "/r/" + subreddit + "/" + "?num_posts=" + num_posts + "&top_rank=" + top_rank + "&count=" + (parseInt(count) + post_index) + "'>Next Page</a>\
-                </div>") :
-		("\
-                <div>\
-                    <a class='next_page' href='" + WEBSITE_URL + "/r/" + subreddit + "/" + "?num_posts=" + num_posts + "&top_rank=" + top_rank + "&count=" + (parseInt(count) + post_index) + "&after=" + result.rows[post_index-1].post_id + "'>Next Page</a>\
-                </div>");
+                    <a class='next_page' href='" + WEBSITE_URL + "/r/" + subreddit + "/" + "?num_posts=" + num_posts + "&top_rank=" + top_rank + "&count=" + (parseInt(count) + post_index) + (is_rand ? "&rand=true" : "&after=" + result.rows[post_index-1].post_id) + "'>Next Page</a>\
+                </div>";
         }
     }
     else {
