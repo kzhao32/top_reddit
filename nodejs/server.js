@@ -232,7 +232,8 @@ function get_HTML_posts(subreddit, count, result, num_posts) {
                 <source src=" + match[0].replace(".gifv\"", ".mp4\"") + " />\
                 </video>"
             } else if (match[0].includes("imgur.com")) { // post with image file cqiy5o
-                media_tag = "<img src=" + match[0].replace(/\"$/, ".jpg\"") + " />";
+                media_tag = match[0].replace(/\"$/, ".jpg\"");
+                media_tag = "<a href=" + media_tag + "><img src=" + media_tag + " /></a>";
             } else if (match[0].includes("gfycat.com")) { // gfycat gifs
                 if (match[0].indexOf("-") > 0) { // need to omit anything after hyphen for ifr gfycat
                     match[0] = match[0].substr(0, match[0].indexOf("-")) + "\"";
