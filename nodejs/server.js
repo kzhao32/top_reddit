@@ -58,7 +58,7 @@ function get_subreddit(req, res, next, subreddit) {
 
         [ table_name, num_posts, top_rank, count, after, is_rand ] = get_query_parameters(req, subreddit);
 
-        let sql_query = "(\n"
+        let sql_query = ""
         for (table_index = 0; table_index < table_name.length; ++table_index) {
             let after_sql = "";
             if (after != null && after != "undefined") {
@@ -85,7 +85,6 @@ function get_subreddit(req, res, next, subreddit) {
                     "    )\n";
             }
             sql_query = sql_query + (table_index == 0 ? "" : "UNION\n") +
-                "(\n" +
                 "SELECT *\n" +
                 "FROM " + table_name[table_index] + "\n" +
                 "WHERE top_rank <= " + top_rank + " " +
@@ -93,13 +92,13 @@ function get_subreddit(req, res, next, subreddit) {
                         "" :
                         "AND category IN ('" + subreddit.split('+').join("', '") + "') ") + "\n" +
                 after_sql +
-                ")\n";
+		"ORDER BY " + (is_rand ?
+		    "RANDOM()" :
+		    "time_top_rank_achieved DESC, top_rank ASC, updated DESC") +
+		    "\n" +
+                "\n";
         }
-        sql_query += ")\n" + "ORDER BY " +
-            (is_rand ?
-              "RANDOM()" :
-              "time_top_rank_achieved DESC, top_rank ASC, updated DESC"
-            );
+        console.log(sql_query);
         client.query(sql_query,
             function(err, result) {
                 get_HTML(done, err, result, res, subreddit, table_name, num_posts, top_rank, count, after, is_rand);
@@ -117,7 +116,7 @@ function check_error(res, err) {
 
 function get_query_parameters(req, subreddit) {
     // Query parameters
-    let table_name = subreddit === "popular" ? ["top_posts"] : subreddit === "nsfw" ? ["nsfw_subreddits"] : ["subreddits", "nsfw_subreddits"];
+    let table_name = subreddit === "popular" ? ["top_posts"] : (subreddit === "nsfw" ? ["nsfw_subreddits"] : ["subreddits"]); //, "nsfw_subreddits"]);
     let num_posts = req.query.num_posts;
     if (num_posts == null || num_posts < 1) {
         num_posts = DEFAULT_CONFIG.get("num_posts");
@@ -133,12 +132,6 @@ function get_query_parameters(req, subreddit) {
         count = DEFAULT_CONFIG.get("count");
     }
     let after = req.query.after;
-    /*let rand = req.query.rand;
-    console.log("rand = '" + rand + "'");
-    if (rand === "") {
-	console.log("rand is string");
-    }
-    console.log(typeof rand);*/
     let is_rand = req.query.rand === "true" || req.query.rand === "" || req.query.is_rand === "true" || req.query.is_rand === "";
     return [ table_name, num_posts, top_rank, count, after, is_rand ];
 }
